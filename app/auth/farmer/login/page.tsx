@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -19,16 +20,21 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { AuthService } from '@/services/auth.service';
+import { toast } from 'sonner';
 
 export default function FarmerAuth() {
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
+    lastName: '',
     email: '',
     phone: '',
     location: '',
+    residence: '',
     password: '',
     confirmPassword: ''
   });
@@ -39,25 +45,86 @@ export default function FarmerAuth() {
       [e.target.name]: e.target.value
     });
   };
-
-  const handleSubmit = (e: React.FormEvent) => {
+        
+  const handleSubmit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
-    if (isLogin) {
-      // Lógica de login - redirigir al dashboard del agricultor
-      console.log('Login attempt:', { email: formData.email, password: formData.password });
-      // window.location.href = '/dashboard/farmer';
-    } else {
-      // Lógica de registro - redirigir al login después del registro
-      console.log('Register attempt:', formData);
-      setIsLogin(true);
-      setFormData({
-        name: '',
-        email: '',
-        phone: '',
-        location: '',
-        password: '',
-        confirmPassword: ''
-      });
+    setIsLoading(true);
+
+    try {
+
+  if (isLogin) {
+  const email = formData.email.trim().toLowerCase();   // ✅ normaliza
+  const password = formData.password;                  // no toques espacios intermedios
+
+  const response = await AuthService.login(email, password);
+}
+
+      if (isLogin) {
+        try {
+          // Intentar login real con el backend
+          const response = await AuthService.login(formData.email, formData.password);
+          
+          // Verificar que sea agricultor
+          if (response.user.role !== 'farmer') {
+            toast.error('Acceso denegado. Esta sección es solo para agricultores.');
+            return;
+          }
+
+          // Verificar que la cuenta esté activa
+          if (response.user.status !== 'active') {
+            toast.error('Tu cuenta está pendiente de activación por el administrador. Por favor espera a que activen tu cuenta.');
+            return;
+          }
+
+          toast.success(`¡Bienvenido ${response.user.name}!`);
+          window.location.href = '/dashboard/farmer';
+        } catch (error: any) {
+          console.error('Error en login:', error);
+          toast.error(error.message || 'Error al iniciar sesión. Verifica tus credenciales.');
+        }
+      } else {
+        // Validar contraseñas
+        if (formData.password !== formData.confirmPassword) {
+          toast.error('Las contraseñas no coinciden');
+          return;
+        }
+
+        try {
+          // Registro de nuevo agricultor
+          await AuthService.register({
+            name: formData.name,
+            lastName: formData.lastName || 'Agricultor',
+            email: formData.email,
+            phone: formData.phone,
+            location: formData.location,
+            residence: formData.residence || formData.location,
+            password: formData.password,
+            role: 'farmer'
+          });
+
+          toast.success('¡Cuenta creada exitosamente! Tu cuenta está pendiente de activación por el administrador.');
+        } catch (error: any) {
+          console.error('Error en registro:', error);
+          toast.error(error.message || 'Error al crear la cuenta. Intenta nuevamente.');
+        }
+        
+        setIsLogin(true);
+        setFormData({
+          name: '',
+          lastName: '',
+          email: '',
+          phone: '',
+          location: '',
+          residence: '',
+          password: '',
+          confirmPassword: ''
+        });
+      }
+    } catch (error: any) {
+      console.error('Error en autenticación:', error);
+      toast.error('Error de conexión. Verifica que el backend esté ejecutándose.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -65,9 +132,11 @@ export default function FarmerAuth() {
     setIsLogin(!isLogin);
     setFormData({
       name: '',
+      lastName: '',
       email: '',
       phone: '',
       location: '',
+      residence: '',
       password: '',
       confirmPassword: ''
     });
@@ -136,24 +205,27 @@ export default function FarmerAuth() {
 
           {/* Auth Card */}
           <motion.div
-            initial={{ opacity: 0, y: 50 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-          >
-            <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-2xl overflow-hidden">
-              <CardContent className="p-0">
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={isLogin ? 'login' : 'register'}
-                    initial={{ opacity: 0, x: isLogin ? -50 : 50 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: isLogin ? 50 : -50 }}
-                    transition={{ duration: 0.5 }}
-                    className="p-8"
-                  >
+  initial={{ opacity: 0, y: 50 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ duration: 0.6, delay: 0.2 }}
+>
+  {/* ⬇️ Wrapper con el borde verde/emerald */}
+  <div className="ag-flow ag-flow--green rounded-[28px]">
+    <div className="relative z-[1] rounded-[26px] bg-white/90 backdrop-blur-sm shadow-2xl overflow-hidden">
+      <Card className="bg-transparent border-0 shadow-none">
+        <CardContent className="p-0">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={isLogin ? 'login' : 'register'}
+              initial={{ opacity: 0, x: isLogin ? -50 : 50 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: isLogin ? 50 : -50 }}
+              transition={{ duration: 0.5 }}
+              className="p-8"
+            >
                     <div className="text-center mb-8">
                       <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                        {isLogin ? 'Iniciar Sesión' : 'Crear Cuenta'}
+                        {isLogin ? '🔐 Iniciar Sesión' : '🔑 Crear Cuenta'}
                       </h3>
                       <p className="text-gray-600">
                         {isLogin 
@@ -181,6 +253,25 @@ export default function FarmerAuth() {
                                 onChange={handleInputChange}
                                 className="pl-10 border-gray-200 focus:border-green-500 focus:ring-green-500"
                                 placeholder="Ingresa tu nombre completo"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="lastName" className="text-gray-700 font-medium">
+                              Apellidos
+                            </Label>
+                            <div className="relative">
+                              <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                              <Input
+                                id="lastName"
+                                name="lastName"
+                                type="text"
+                                required
+                                value={formData.lastName}
+                                onChange={handleInputChange}
+                                className="pl-10 border-gray-200 focus:border-green-500 focus:ring-green-500"
+                                placeholder="Ingresa tus apellidos"
                               />
                             </div>
                           </div>
@@ -219,6 +310,25 @@ export default function FarmerAuth() {
                                 onChange={handleInputChange}
                                 className="pl-10 border-gray-200 focus:border-green-500 focus:ring-green-500"
                                 placeholder="Ingresa tu lugar de residencia"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="residence" className="text-gray-700 font-medium">
+                              Dirección Completa
+                            </Label>
+                            <div className="relative">
+                              <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                              <Input
+                                id="residence"
+                                name="residence"
+                                type="text"
+                                required
+                                value={formData.residence}
+                                onChange={handleInputChange}
+                                className="pl-10 border-gray-200 focus:border-green-500 focus:ring-green-500"
+                                placeholder="Ingresa tu dirección completa"
                               />
                             </div>
                           </div>
@@ -297,26 +407,16 @@ export default function FarmerAuth() {
                           </div>
                         </div>
                       )}
-
+                     
                       <Button
                         type="submit"
+                        disabled={isLoading}
                         className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
                       >
-                        {isLogin ? 'Iniciar Sesión' : 'Crear Cuenta'}
+                        {isLoading ? 'Procesando...' : (isLogin ? 'Iniciar Sesión' : 'Crear Cuenta')}
                         <ArrowRight className="ml-2 h-5 w-5" />
                       </Button>
 
-                      {/* Demo Login Button */}
-                      {isLogin && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="w-full border-green-200 hover:bg-green-50 text-green-700 py-3"
-                          onClick={() => window.location.href = '/dashboard/farmer'}
-                        >
-                          Acceso Demo (Sin Backend)
-                        </Button>
-                      )}
                     </form>
 
                     <div className="mt-8 text-center">
@@ -335,6 +435,8 @@ export default function FarmerAuth() {
                 </AnimatePresence>
               </CardContent>
             </Card>
+            </div>
+            </div>
           </motion.div>
         </div>
       </div>

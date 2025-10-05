@@ -3,19 +3,15 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  User, 
-  Sprout, 
-  Shield, 
-  Globe, 
   ChevronDown,
   ArrowLeft,
   ArrowRight,
   Leaf,
-  Users,
   Settings,
   ShoppingCart,
   Tractor,
-  Crown
+  Crown,
+  Globe
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -59,7 +55,7 @@ const languages: Language[] = [
 
 const translations: Translations = {
   es: {
-    welcome: 'Bienvenido a AgroGlobal',
+    welcome: ' Bienvenido a AgroGlobal 🎈',
     selectLanguage: 'Seleccionar Idioma',
     selectRole: 'Selecciona tu Rol',
     client: 'Cliente',
@@ -73,7 +69,7 @@ const translations: Translations = {
     backToHome: 'Volver al Inicio',
     continue: 'Continuar',
     clientWelcome: 'Bienvenido al Sector Cliente',
-    farmerWelcome: 'Bienvenido al Sector Agricultor',
+    farmerWelcome: 'Bienvenido al Sector Agricultor', 
     adminWelcome: 'Bienvenido al Sector Administrador',
     go: 'Ir',
     back: 'Atrás'
@@ -193,6 +189,31 @@ export default function DashboardSelect() {
     }
   };
 
+  // === (Habías dejado este bloque, pero no lo usas; lo mantengo) ===
+  const [active, setActive] = useState(1);
+  const total = roles.length;
+  const radius = 380;
+  const perspective = 1100;
+  function relPos(index: number, active: number, total: number) {
+    const d = (index - active + total) % total;
+    if (d === 0) return 0;
+    if (d === 1) return 1;
+    if (d === total - 1) return -1;
+    return 0;
+  }
+  const goLeft = () => { setSelectedRole(null); setActive((a) => (a - 1 + total) % total); };   // ⭐ des-selecciona
+  const goRight = () => { setSelectedRole(null); setActive((a) => (a + 1) % total); };         // ⭐ des-selecciona
+
+  const handleKey = (e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowLeft') goLeft();
+    if (e.key === 'ArrowRight') goRight();
+  };
+  const decideFromDrag = (_: any, info: { offset: { x: number }; velocity: { x: number } }) => {
+    const delta = info.offset.x + info.velocity.x * 0.2;
+    if (delta > 40) goLeft();
+    else if (delta < -40) goRight();
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-purple-50">
       {/* Header */}
@@ -292,91 +313,195 @@ export default function DashboardSelect() {
           </div>
         </motion.div>
 
-        {/* Role Selection */}
-        <motion.div 
-          className="mb-16"
+        {/* Role Selection – CARRUSEL 3D */}
+        <motion.div
+          className="mb-10"
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.4 }}
         >
-          <div className="text-center mb-12">
+          <div className="text-center mb-10">
             <Badge className="mb-4 bg-green-100 text-green-700 hover:bg-green-200 text-lg px-6 py-2">
               {t.selectRole}
             </Badge>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            {roles.map((role, index) => (
-              <motion.div
-                key={role.id}
-                initial={{ opacity: 0, y: 50 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.6 + index * 0.1 }}
-              >
-                <Card 
-                  className={`group cursor-pointer transition-all duration-500 border-0 shadow-lg hover:shadow-2xl transform hover:scale-105 ${
-                    selectedRole === role.id 
-                      ? 'ring-4 ring-green-400 shadow-2xl scale-105' 
-                      : 'hover:shadow-green-500/10'
-                  } ${role.bgColor} bg-opacity-30 backdrop-blur-sm`}
-                  onClick={() => handleRoleSelect(role.id)}
+          {/* ======= Carrusel circular ======= */}
+          {(() => {
+            const order = ['client', 'farmer', 'administrator'];
+            const startIndex = Math.max(0, order.indexOf('farmer'));
+            const [frontIdx, setFrontIdx] = useState(startIndex);
+            const [dragStartX, setDragStartX] = useState<number | null>(null);
+
+            const toCircular = (i: number) => {
+              const n = order.length;
+              return (i + n) % n;
+            };
+
+            const rotateLeft = () => {                          // ⭐ des-selecciona al girar
+              setSelectedRole(null);
+              setFrontIdx((v) => toCircular(v + 1));
+            };
+            const rotateRight = () => {                         // ⭐ des-selecciona al girar
+              setSelectedRole(null);
+              setFrontIdx((v) => toCircular(v - 1));
+            };
+
+            const getRelPos = (i: number) => {
+              const n = order.length;
+              const idx = toCircular(i);
+              const center = frontIdx;
+              if (idx === center) return 0;
+              if (idx === toCircular(center - 1)) return -1;
+              return 1;
+            };
+
+            const onPointerDown = (e: React.PointerEvent) => setDragStartX(e.clientX);
+            const onPointerUp = (e: React.PointerEvent) => {
+              if (dragStartX == null) return;
+              const delta = e.clientX - dragStartX;
+              setDragStartX(null);
+              if (Math.abs(delta) < 30) return;
+              setSelectedRole(null);                            // ⭐ des-selecciona en drag
+              if (delta < 0) rotateLeft();
+              else rotateRight();
+            };
+
+            const onCardClick = (id: string) => {
+              const idx = order.indexOf(id);
+              if (idx === -1) return;
+              if (idx !== frontIdx) {
+                const left = toCircular(frontIdx + 1);
+                const right = toCircular(frontIdx - 1);
+                if (idx === left) rotateLeft();
+                else if (idx === right) rotateRight();
+                else setFrontIdx(idx);
+                return;
+              }
+              setSelectedRole(id);
+            };
+
+            return (
+              // ⭐ Contenedor relativo con padding inferior para el botón absoluto
+              <section className="relative mx-auto max-w-6xl w-full flex flex-col items-center pb-28">
+                <div
+                  className="relative w-full h-[560px] md:h-[600px] overflow-visible z-[40]"
+                  style={{ perspective: 1200 }}
+                  onPointerDown={onPointerDown}
+                  onPointerUp={onPointerUp}
                 >
-                  <CardContent className="p-8 text-center">
-                    <motion.div 
-                      className={`inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-r ${role.color} text-white mb-6 group-hover:scale-110 transition-transform duration-300`}
-                      whileHover={{ rotate: 360 }}
-                      transition={{ duration: 0.6 }}
-                    >
-                      {role.icon}
-                    </motion.div>
-                    
-                    <h3 className="text-2xl font-bold text-gray-900 mb-4 group-hover:text-green-700 transition-colors duration-300">
-                      {role.title}
-                    </h3>
-                    
-                    <p className="text-gray-600 leading-relaxed group-hover:text-gray-700 transition-colors duration-300">
-                      {role.description}
-                    </p>
+                  {/* Flechas */}
+                  <button
+                    onClick={rotateRight}
+                    className="hidden md:flex absolute left-3 top-1/2 -translate-y-1/2 z-[60] bg-white/70 hover:bg-white rounded-full shadow p-3"
+                    aria-label="Anterior"
+                  >
+                    <ArrowLeft className="h-5 w-5 text-gray-700" />
+                  </button>
+                  <button
+                    onClick={rotateLeft}
+                    className="hidden md:flex absolute right-3 top-1/2 -translate-y-1/2 z-[60] bg-white/70 hover:bg-white rounded-full shadow p-3"
+                    aria-label="Siguiente"
+                  >
+                    <ArrowRight className="h-5 w-5 text-gray-700" />
+                  </button>
 
-                    {selectedRole === role.id && (
+                  {/* Cards */}
+                  {order.map((id) => {
+                    const r = roles.find((x) => x.id === id)!;
+                    const rel = getRelPos(order.indexOf(id));
+
+                    const config = {
+                      0:   { z: 120, x: 0,    rotY: 0,   scale: 0.96, opacity: 1,    blur: 'blur(0px)',   zIndex: 50 },
+                      '-1':{ z: -80, x: -300, rotY: 18,  scale: 0.86, opacity: 0.55, blur: 'blur(1.5px)', zIndex: 30 },
+                      1:   { z: -80, x: 300,  rotY: -18, scale: 0.86, opacity: 0.55, blur: 'blur(1.5px)', zIndex: 30 },
+                    } as const; // ⭐ scale bajada = cards un poquito más pequeñas
+
+                    const st = config[rel as -1 | 0 | 1];
+                    const isSelected = selectedRole === id && rel === 0;
+
+                    return (
                       <motion.div
-                        className="mt-6"
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ duration: 0.3 }}
+                        key={id}
+                        className="absolute left-1/2 top-1/2 origin-center"
+                        style={{ transformStyle: 'preserve-3d', zIndex: st.zIndex }}
+                        initial={false}
+                        animate={{
+                          x: st.x,
+                          y: -10,
+                          scale: st.scale,
+                          opacity: st.opacity,
+                          rotateY: st.rotY,
+                          translateZ: st.z,
+                          filter: st.blur as any,
+                        }}
+                        transition={{ type: 'spring', stiffness: 120, damping: 18 }}
                       >
-                        <Badge className="bg-green-500 text-white">
-                          Seleccionado ✓
-                        </Badge>
-                      </motion.div>
-                    )}
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
-          </div>
+                        <div className="-translate-x-1/2 -translate-y-1/2">
+                          <Card
+                            onClick={() => onCardClick(id)}
+                            className={`w-[430px] max-w-[90vw] h-[380px] md:h-[360px]  // ⭐ un toque más pequeñas
+                              cursor-pointer border-0 shadow-xl bg-white/90 backdrop-blur rounded-3xl
+                              overflow-hidden transition-all duration-300
+                              ${rel === 0 ? 'hover:shadow-2xl' : ''}
+                              ${isSelected ? 'ring-4 ring-green-400' : ''}`}
+                          >
+                            <CardContent className="h-full flex flex-col items-center justify-center p-10">
+                              {/* ⭐ icono animado al hover */}
+                              <motion.div
+                                className={`inline-flex items-center justify-center w-24 h-24 rounded-full bg-gradient-to-r ${r.color} text-white mb-6`}
+                                whileHover={{ rotate: 360 }}
+                                transition={{ duration: 0.6 }}
+                              >
+                                {r.icon}
+                              </motion.div>
 
-          {/* Continue Button */}
-          <motion.div 
-            className="text-center mt-12"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: selectedRole ? 1 : 0.5 }}
-            transition={{ duration: 0.3 }}
-          >
-            <Button 
-              size="lg"
-              className={`px-12 py-4 text-lg rounded-full shadow-2xl transition-all duration-300 transform ${
-                selectedRole 
-                  ? 'bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 hover:scale-105 text-white' 
-                  : 'bg-gray-300 cursor-not-allowed text-gray-500'
-              }`}
-              disabled={!selectedRole}
-              onClick={handleContinue}
-            >
-              {t.continue}
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
-          </motion.div>
+                              <h3 className="text-3xl font-extrabold text-gray-900 mb-3">
+                                {r.title}
+                              </h3>
+
+                              <p className="text-gray-600 text-lg leading-relaxed text-center max-w-[460px]">
+                                {r.description}
+                              </p>
+
+                              {isSelected && (
+                                <motion.div
+                                  className="mt-5"
+                                  initial={{ opacity: 0, scale: 0.9 }}
+                                  animate={{ opacity: 1, scale: 1 }}
+                                >
+                                  <Badge className="bg-green-500 text-white text-sm px-3 py-1 rounded-full shadow">
+                                    Seleccionado ✓
+                                  </Badge>
+                                </motion.div>
+                              )}
+                            </CardContent>
+                          </Card>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+
+                {/* ⭐ Botón ~1cm arriba: absoluto dentro del contenedor */}
+                <div className="absolute left-1/2 -translate-x-1/2 bottom-10 z-[80]">
+                  <Button
+                    size="lg"
+                    className={`px-10 py-4 text-lg rounded-full shadow-2xl transition-all duration-300 ${
+                      selectedRole
+                        ? 'bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white'
+                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    }`}
+                    disabled={!selectedRole}
+                    onClick={handleContinue}
+                  >
+                    {t.continue}
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Button>
+                </div>
+              </section>
+            );
+          })()}
         </motion.div>
 
         {/* About System Section */}

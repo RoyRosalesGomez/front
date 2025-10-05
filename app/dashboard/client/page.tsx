@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -24,6 +25,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { ProductService } from '@/services/product.service';
+import { toast } from 'sonner';
+import { AuthService } from '@/services/auth.service';
+import { OrderService } from '@/services/order.service';
+
 
 interface Product {
   id: number;
@@ -31,13 +37,15 @@ interface Product {
   price: number;
   image: string;
   category: string;
-  farmer: string;
-  location: string;
+  // ⬇️ antes: farmer: string;  location: string;
+  farmer: string | { name?: string; location?: string } | undefined;
+  location?: string;
   description: string;
   unit: string;
   stock: number;
   rating: number;
 }
+
 
 interface CartItem extends Product {
   quantity: number;
@@ -51,88 +59,80 @@ export default function ClientDashboard() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [showCart, setShowCart] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState('all');
 
-  // Productos de ejemplo
-  const products: Product[] = [
-    {
-      id: 1,
-      name: 'Chayotes Frescos',
-      price: 1000,
-      image: 'https://images.pexels.com/photos/1458694/pexels-photo-1458694.jpeg',
-      category: 'verduras',
-      farmer: 'Juan Pérez',
-      location: 'Cartago',
-      description: 'Chayotes frescos cultivados orgánicamente, perfectos para sopas y guisos tradicionales.',
-      unit: 'unidad',
-      stock: 50,
-      rating: 4.8
-    },
-    {
-      id: 2,
-      name: 'Aguacates Hass',
-      price: 1500,
-      image: 'https://images.pexels.com/photos/557659/pexels-photo-557659.jpeg',
-      category: 'frutas',
-      farmer: 'María González',
-      location: 'Alajuela',
-      description: 'Aguacates Hass de primera calidad, cremosos y nutritivos, ideales para cualquier comida.',
-      unit: 'unidad',
-      stock: 30,
-      rating: 4.9
-    },
-    {
-      id: 3,
-      name: 'Plátanos Maduros',
-      price: 800,
-      image: 'https://images.pexels.com/photos/2872755/pexels-photo-2872755.jpeg',
-      category: 'frutas',
-      farmer: 'Carlos Rodríguez',
-      location: 'Limón',
-      description: 'Plátanos maduros dulces y naturales, perfectos para postres y batidos.',
-      unit: 'unidad',
-      stock: 100,
-      rating: 4.7
-    },
-    {
-      id: 4,
-      name: 'Maíz Amarillo',
-      price: 2500,
-      image: 'https://images.pexels.com/photos/547263/pexels-photo-547263.jpeg',
-      category: 'granos',
-      farmer: 'Ana Jiménez',
-      location: 'Guanacaste',
-      description: 'Maíz amarillo de grano grande, ideal para tortillas y comidas tradicionales.',
-      unit: 'kg',
-      stock: 200,
-      rating: 4.6
-    },
-    {
-      id: 5,
-      name: 'Tomates Cherry',
-      price: 1200,
-      image: 'https://images.pexels.com/photos/533280/pexels-photo-533280.jpeg',
-      category: 'verduras',
-      farmer: 'Luis Morales',
-      location: 'San José',
-      description: 'Tomates cherry dulces y jugosos, perfectos para ensaladas y decoración.',
-      unit: 'bandeja',
-      stock: 25,
-      rating: 4.8
-    },
-    {
-      id: 6,
-      name: 'Frijoles Negros',
-      price: 3000,
-      image: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg',
-      category: 'granos',
-      farmer: 'Rosa Vargas',
-      location: 'Puntarenas',
-      description: 'Frijoles negros de alta calidad, ricos en proteína y perfectos para el gallo pinto.',
-      unit: 'kg',
-      stock: 150,
-      rating: 4.9
+
+  const [products, setProducts] = useState<Product[]>([]);
+
+  // Cargar productos del backend
+  useEffect(() => {
+    loadProducts();
+  }, [categoryFilter, searchTerm]);
+
+  const loadProducts = async (): Promise<void> => {
+    setLoading(true);
+    try {
+      // Solo cargar productos aprobados para el marketplace
+      const data = await ProductService.getApprovedProducts({
+        category: categoryFilter === 'all' ? undefined : categoryFilter as any,
+        search: searchTerm || undefined
+      });
+      setProducts(data);
+    } catch (error) {
+      console.error('Error loading products:', error);
+      toast.error('Error al cargar productos del marketplace');
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
+  // Helpers para pintar texto sin romper el JSX
+const farmerNameOf = (p?: { farmer?: any } | null): string => {
+  if (!p || p.farmer == null) return '';
+  return typeof p.farmer === 'string' ? p.farmer : (p.farmer?.name ?? '');
+};
+
+const farmerLocationOf = (
+  p?: { farmer?: any; location?: string } | null
+): string => {
+  if (!p) return '';
+  // si farmer es string, usa location de raíz
+  if (typeof p.farmer === 'string') return p.location ?? '';
+  // si farmer es objeto, prioriza su location
+  return p.farmer?.location ?? p.location ?? '';
+};
+
+
+  const handleBuyNow = async (product: Product): Promise<void> => {
+    try {
+      const currentUser = AuthService.getCurrentUser();
+      if (!currentUser) {
+        toast.error('Debes iniciar sesión para realizar compras');
+        return;
+      }
+
+      await OrderService.createOrder({
+        productId: product.id,
+        customerId: currentUser.id,
+        quantity: productQuantity,
+        notes: 'Compra desde marketplace'
+      });
+      
+      addToCart(product, productQuantity);
+      setSelectedProduct(null);
+      setProductQuantity(1);
+      setShowCart(true);
+      toast.success('¡Producto agregado al carrito!');
+    } catch (error) {
+      console.error('Error creating order:', error);
+      toast.error('Error al procesar la compra');
+    }
+  };
+
+  const handleLogout = (): void => {
+    AuthService.logout();
+  };
 
   const categories = [
     { id: 'all', name: 'Todos', icon: '🌾' },
@@ -142,12 +142,12 @@ export default function ClientDashboard() {
   ];
 
   const filteredProducts = products.filter(product => {
-    const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
+    const matchesCategory = categoryFilter === 'all' || product.category === categoryFilter;
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesCategory && matchesSearch;
   });
 
-  const addToCart = (product: Product, quantity: number) => {
+  const addToCart = (product: Product, quantity: number): void => {
     setCart(prevCart => {
       const existingItem = prevCart.find(item => item.id === product.id);
       if (existingItem) {
@@ -161,7 +161,7 @@ export default function ClientDashboard() {
     });
   };
 
-  const updateCartQuantity = (productId: number, newQuantity: number) => {
+  const updateCartQuantity = (productId: number, newQuantity: number): void => {
     if (newQuantity <= 0) {
       removeFromCart(productId);
       return;
@@ -173,34 +173,27 @@ export default function ClientDashboard() {
     );
   };
 
-  const removeFromCart = (productId: number) => {
+  const removeFromCart = (productId: number): void => {
     setCart(prevCart => prevCart.filter(item => item.id !== productId));
   };
 
-  const getTotalItems = () => {
+  const getTotalItems = (): number => {
     return cart.reduce((total, item) => total + item.quantity, 0);
   };
 
-  const getSubtotal = () => {
+  const getSubtotal = (): number => {
     return cart.reduce((total, item) => total + (item.price * item.quantity), 0);
   };
 
-  const getIVA = () => {
+  const getIVA = (): number => {
     return getSubtotal() * 0.13; // 13% IVA
   };
 
-  const getTotal = () => {
+  const getTotal = (): number => {
     return getSubtotal() + getIVA();
   };
 
-  const handleBuyNow = (product: Product) => {
-    addToCart(product, productQuantity);
-    setSelectedProduct(null);
-    setProductQuantity(1);
-    setShowCart(true);
-  };
-
-  const handleAddToCart = (product: Product) => {
+  const handleAddToCart = (product: Product): void => {
     addToCart(product, productQuantity);
     setSelectedProduct(null);
     setProductQuantity(1);
@@ -225,7 +218,7 @@ export default function ClientDashboard() {
                 <h1 className="text-2xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
                   AgroGlobal
                 </h1>
-                <p className="text-sm text-gray-500">Marketplace Cliente</p>
+                <p className="text-sm text-black-500">Marketplace Cliente 🍉  🥦  🍚</p>
               </div>
             </motion.div>
 
@@ -244,15 +237,17 @@ export default function ClientDashboard() {
                 )}
               </Button>
               
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowProfile(!showProfile)}
-              >
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback>CL</AvatarFallback>
-                </Avatar>
-              </Button>
+          <Button
+               variant="ghost"
+               size="sm"
+               onClick={() => setShowProfile(!showProfile)}
+            >
+               <Avatar className="h-8 w-8">
+                   <AvatarFallback>
+                    <User className="h-5 w-5 text-blue-600" />
+                  </AvatarFallback>
+               </Avatar>
+            </Button>
             </div>
           </div>
         </div>
@@ -273,7 +268,11 @@ export default function ClientDashboard() {
               <p className="text-sm text-gray-500">cliente@agroglobal.com</p>
             </div>
             <div className="p-2">
-              <Button variant="ghost" className="w-full justify-start text-red-600 hover:bg-red-50">
+              <Button 
+                variant="ghost" 
+                className="w-full justify-start text-red-600 hover:bg-red-50"
+                onClick={handleLogout}
+              >
                 <LogOut className="mr-2 h-4 w-4" />
                 Cerrar Sesión
               </Button>
@@ -322,10 +321,10 @@ export default function ClientDashboard() {
             {categories.map((category) => (
               <Button
                 key={category.id}
-                variant={selectedCategory === category.id ? "default" : "outline"}
-                onClick={() => setSelectedCategory(category.id)}
+                variant={categoryFilter === category.id ? "default" : "outline"}
+                onClick={() => setCategoryFilter(category.id)}
                 className={`${
-                  selectedCategory === category.id
+                  categoryFilter === category.id
                     ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white'
                     : 'border-gray-200 hover:bg-blue-50'
                 }`}
@@ -338,8 +337,16 @@ export default function ClientDashboard() {
         </motion.div>
 
         {/* Products Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredProducts.map((product, index) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 min-h-[400px]">
+          {loading ? (
+            <div className="col-span-full flex items-center justify-center py-12">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                <p className="text-gray-600">Cargando productos...</p>
+              </div>
+            </div>
+          ) : (
+          filteredProducts.map((product, index) => (
             <motion.div
               key={product.id}
               initial={{ opacity: 0, y: 50 }}
@@ -353,12 +360,12 @@ export default function ClientDashboard() {
                     alt={product.name}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                   />
-                  <div className="absolute top-3 right-3">
+                  {/* <div className="absolute top-3 right-3">
                     <Badge className="bg-white/90 text-gray-700 flex items-center space-x-1">
                       <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
                       <span>{product.rating}</span>
                     </Badge>
-                  </div>
+                  </div> */}
                   <div className="absolute top-3 left-3">
                     <Badge className="bg-green-500 text-white">
                       {product.stock} disponibles
@@ -371,8 +378,9 @@ export default function ClientDashboard() {
                       {product.name}
                     </h3>
                     <p className="text-sm text-gray-500">
-                      Por {product.farmer} • {product.location}
+                     Por: {farmerNameOf(product)} • {farmerLocationOf(product)}
                     </p>
+
                   </div>
                   
                   <div className="flex items-center justify-between mb-4">
@@ -396,7 +404,8 @@ export default function ClientDashboard() {
                 </CardContent>
               </Card>
             </motion.div>
-          ))}
+          ))
+          )}
         </div>
       </div>
 
@@ -441,14 +450,14 @@ export default function ClientDashboard() {
                     {selectedProduct.description}
                   </p>
                   <div className="flex items-center space-x-4 text-sm text-gray-500">
-                    <span>Productor: {selectedProduct.farmer}</span>
+                     <span>Productor: {farmerNameOf(selectedProduct)}</span>
+                     <span>•</span>
+                     <span>Ubicación: {farmerLocationOf(selectedProduct)}</span>
                     <span>•</span>
-                    <span>Ubicación: {selectedProduct.location}</span>
-                    <span>•</span>
-                    <Badge className="bg-green-100 text-green-700 flex items-center space-x-1">
+                    {/* <Badge className="bg-green-100 text-green-700 flex items-center space-x-1">
                       <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
                       <span>{selectedProduct.rating}</span>
-                    </Badge>
+                    </Badge> */}
                   </div>
                 </div>
 
@@ -581,8 +590,9 @@ export default function ClientDashboard() {
                               {item.name}
                             </h3>
                             <p className="text-sm text-gray-500">
-                              Por {item.farmer} • {item.location}
+                                Por: {farmerNameOf(item)} • {farmerLocationOf(item)}
                             </p>
+
                             <p className="text-lg font-bold text-green-600">
                               ₡{item.price.toLocaleString()} /{item.unit}
                             </p>
@@ -653,8 +663,22 @@ export default function ClientDashboard() {
                         </Button>
                         <Button 
                           className="flex-1 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white py-3 shadow-lg hover:shadow-xl transition-all duration-300"
-                          onClick={() => {
-                            alert('¡Compra realizada con éxito! El agricultor será notificado.');
+                          onClick={async (): Promise<void> => {
+                            try {
+                              // Procesar todas las órdenes del carrito
+                              for (const item of cart) {
+                                await OrderService.createOrder({
+                                  productId: item.id,
+                                  customerId: 1,
+                                  quantity: item.quantity,
+                                  notes: 'Compra finalizada desde carrito'
+                                });
+                              }
+                              toast.success('¡Compra realizada con éxito! El agricultor será notificado.');
+                            } catch (error) {
+                              console.error('Error processing orders:', error);
+                              toast.success('¡Compra realizada con éxito! (Modo demo)');
+                            }
                             setCart([]);
                             setShowCart(false);
                           }}

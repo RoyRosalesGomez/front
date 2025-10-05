@@ -1,73 +1,71 @@
+
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation'; // 👈 IMPORTANTE
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Crown, 
-  ArrowLeft, 
-  Mail,
-  Lock,
-  Eye,
-  EyeOff,
-  User,
-  Phone,
-  MapPin,
-  Leaf,
-  ArrowRight
+  Crown, ArrowLeft, Mail, Lock, Eye, EyeOff, User, Phone, MapPin, Leaf, ArrowRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { AuthService } from '@/services/auth.service';
+import { toast } from 'sonner';
+
 
 export default function AdminAuth() {
+  const router = useRouter(); // 👈 AHORA SÍ EXISTE
+
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // 👇 Usa un SOLO estado para el formulario
   const [formData, setFormData] = useState({
     name: '',
+    lastName: '',
     email: '',
     phone: '',
     location: '',
+    residence: '',
     password: '',
     confirmPassword: ''
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (isLogin) {
-      // Lógica de login - redirigir al dashboard del administrador
-      console.log('Login attempt:', { email: formData.email, password: formData.password });
-      // window.location.href = '/dashboard/admin';
-    } else {
-      // Lógica de registro - redirigir al login después del registro
-      console.log('Register attempt:', formData);
-      setIsLogin(true);
-      setFormData({
-        name: '',
-        email: '',
-        phone: '',
-        location: '',
-        password: '',
-        confirmPassword: ''
-      });
+  async function handleSubmit(e: React.FormEvent) {
+  e.preventDefault();
+  setIsLoading(true);
+  try {
+    const res = await AuthService.login(formData.email.trim(), formData.password);
+    router.push('/dashboard/admin');
+  } catch (err: any) {
+    const msg = String(err?.message || '');
+    if (msg.includes('Credenciales inválidas') || msg.includes('401')) {
+      toast.error('Correo o contraseña incorrectos.');
+      return;
     }
-  };
+    toast.error('No se pudo contactar el servidor.');
+  } finally {
+    setIsLoading(false);
+  }
+}
 
   const toggleAuthMode = () => {
     setIsLogin(!isLogin);
     setFormData({
       name: '',
+      lastName: '',
       email: '',
       phone: '',
       location: '',
+      residence: '',
       password: '',
       confirmPassword: ''
     });
@@ -92,16 +90,16 @@ export default function AdminAuth() {
                 AgroGlobal
               </h1>
             </motion.div>
-            
+
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
             >
-              <Button 
+              <Button
                 variant="outline"
                 className="border-purple-200 hover:bg-purple-50 text-purple-700"
-                onClick={() => window.location.href = '/auth/admin'}
+                onClick={() => router.push('/dashboard-select')}
               >
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Atrás
@@ -136,30 +134,36 @@ export default function AdminAuth() {
 
           {/* Auth Card */}
           <motion.div
-            initial={{ opacity: 0, y: 50 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-          >
-            <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-2xl overflow-hidden">
-              <CardContent className="p-0">
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={isLogin ? 'login' : 'register'}
-                    initial={{ opacity: 0, x: isLogin ? -50 : 50 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: isLogin ? 50 : -50 }}
-                    transition={{ duration: 0.5 }}
-                    className="p-8"
-                  >
+  initial={{ opacity: 0, y: 50 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ duration: 0.6, delay: 0.2 }}
+>
+  {/* ⬇️ Wrapper con el borde morado/indigo */}
+  <div className="ag-flow ag-flow--purple rounded-[28px]">
+    {/* capa interior (contenido) */}
+    <div className="relative z-[1] rounded-[26px] bg-white/90 backdrop-blur-sm shadow-2xl overflow-hidden">
+      {/* tu Card queda transparente (solo para espaciar/padding si lo necesitas) */}
+      <Card className="bg-transparent border-0 shadow-none">
+        <CardContent className="p-0">
+          <AnimatePresence mode="wait">
+            {/* ⬇️ A partir de aquí pega TODO lo que ya tenías (sin cambiar nada). 
+                Es decir, desde el <motion.div key=...> hasta el cierre correspondiente. */}
+            <motion.div
+              key={isLogin ? 'login' : 'register'}
+              initial={{ opacity: 0, x: isLogin ? -50 : 50 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: isLogin ? 50 : -50 }}
+              transition={{ duration: 0.5 }}
+              className="p-8"
+            >
                     <div className="text-center mb-8">
                       <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                        {isLogin ? 'Iniciar Sesión' : 'Crear Cuenta'}
+                        {isLogin ? '🔐 Iniciar Sesión' : '🔑 Crear Cuenta'}
                       </h3>
                       <p className="text-gray-600">
                         {isLogin 
                           ? 'Ingresa tus credenciales para acceder' 
-                          : 'Completa los datos para registrarte'
-                        }
+                          : 'Completa los datos para registrarte'}
                       </p>
                     </div>
 
@@ -171,7 +175,7 @@ export default function AdminAuth() {
                               Nombre Completo
                             </Label>
                             <div className="relative">
-                              <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                              <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                               <Input
                                 id="name"
                                 name="name"
@@ -179,8 +183,27 @@ export default function AdminAuth() {
                                 required
                                 value={formData.name}
                                 onChange={handleInputChange}
-                                className="pl-10 border-gray-200 focus:border-purple-500 focus:ring-purple-500"
+                                className="pl-10"
                                 placeholder="Ingresa tu nombre completo"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="lastName" className="text-gray-700 font-medium">
+                              Apellidos
+                            </Label>
+                            <div className="relative">
+                              <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                              <Input
+                                id="lastName"
+                                name="lastName"
+                                type="text"
+                                required
+                                value={formData.lastName}
+                                onChange={handleInputChange}
+                                className="pl-10"
+                                placeholder="Ingresa tus apellidos"
                               />
                             </div>
                           </div>
@@ -190,7 +213,7 @@ export default function AdminAuth() {
                               Número de Teléfono
                             </Label>
                             <div className="relative">
-                              <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                               <Input
                                 id="phone"
                                 name="phone"
@@ -198,8 +221,27 @@ export default function AdminAuth() {
                                 required
                                 value={formData.phone}
                                 onChange={handleInputChange}
-                                className="pl-10 border-gray-200 focus:border-purple-500 focus:ring-purple-500"
+                                className="pl-10"
                                 placeholder="Ingresa tu número de teléfono"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="residence" className="text-gray-700 font-medium">
+                              Dirección Completa
+                            </Label>
+                            <div className="relative">
+                              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                              <Input
+                                id="residence"
+                                name="residence"
+                                type="text"
+                                required
+                                value={formData.residence}
+                                onChange={handleInputChange}
+                                className="pl-10"
+                                placeholder="Ingresa tu dirección completa"
                               />
                             </div>
                           </div>
@@ -209,7 +251,7 @@ export default function AdminAuth() {
                               Lugar de Residencia
                             </Label>
                             <div className="relative">
-                              <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                               <Input
                                 id="location"
                                 name="location"
@@ -217,7 +259,7 @@ export default function AdminAuth() {
                                 required
                                 value={formData.location}
                                 onChange={handleInputChange}
-                                className="pl-10 border-gray-200 focus:border-purple-500 focus:ring-purple-500"
+                                className="pl-10"
                                 placeholder="Ingresa tu lugar de residencia"
                               />
                             </div>
@@ -230,7 +272,7 @@ export default function AdminAuth() {
                           Correo Electrónico
                         </Label>
                         <div className="relative">
-                          <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                           <Input
                             id="email"
                             name="email"
@@ -238,7 +280,7 @@ export default function AdminAuth() {
                             required
                             value={formData.email}
                             onChange={handleInputChange}
-                            className="pl-10 border-gray-200 focus:border-purple-500 focus:ring-purple-500"
+                            className="pl-10"
                             placeholder="Ingresa tu correo electrónico"
                           />
                         </div>
@@ -249,7 +291,7 @@ export default function AdminAuth() {
                           Contraseña
                         </Label>
                         <div className="relative">
-                          <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                           <Input
                             id="password"
                             name="password"
@@ -257,13 +299,13 @@ export default function AdminAuth() {
                             required
                             value={formData.password}
                             onChange={handleInputChange}
-                            className="pl-10 pr-10 border-gray-200 focus:border-purple-500 focus:ring-purple-500"
+                            className="pl-10 pr-10"
                             placeholder="Ingresa tu contraseña"
                           />
                           <button
                             type="button"
                             onClick={() => setShowPassword(!showPassword)}
-                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                           >
                             {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                           </button>
@@ -276,7 +318,7 @@ export default function AdminAuth() {
                             Confirmar Contraseña
                           </Label>
                           <div className="relative">
-                            <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                             <Input
                               id="confirmPassword"
                               name="confirmPassword"
@@ -284,13 +326,13 @@ export default function AdminAuth() {
                               required
                               value={formData.confirmPassword}
                               onChange={handleInputChange}
-                              className="pl-10 pr-10 border-gray-200 focus:border-purple-500 focus:ring-purple-500"
+                              className="pl-10 pr-10"
                               placeholder="Confirma tu contraseña"
                             />
                             <button
                               type="button"
                               onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                             >
                               {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                             </button>
@@ -300,23 +342,26 @@ export default function AdminAuth() {
 
                       <Button
                         type="submit"
+                        disabled={isLoading}
                         className="w-full bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
                       >
-                        {isLogin ? 'Iniciar Sesión' : 'Crear Cuenta'}
+                        {isLoading ? 'Procesando...' : (isLogin ? 'Iniciar Sesión' : 'Crear Cuenta')}
                         <ArrowRight className="ml-2 h-5 w-5" />
                       </Button>
 
-                      {/* Demo Login Button */}
+                      {/* ❌ Elimina el acceso demo directo (saltaba auth) */}
+                      {/* 
                       {isLogin && (
                         <Button
                           type="button"
                           variant="outline"
                           className="w-full border-purple-200 hover:bg-purple-50 text-purple-700 py-3"
-                          onClick={() => window.location.href = '/dashboard/admin'}
+                          onClick={() => router.push('/dashboard/admin')}
                         >
                           Acceso Demo (Sin Backend)
                         </Button>
-                      )}
+                      )} 
+                      */}
                     </form>
 
                     <div className="mt-8 text-center">
@@ -335,6 +380,8 @@ export default function AdminAuth() {
                 </AnimatePresence>
               </CardContent>
             </Card>
+            </div>
+            </div>
           </motion.div>
         </div>
       </div>
