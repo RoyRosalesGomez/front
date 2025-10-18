@@ -399,6 +399,13 @@ if (!response.ok) {
     delete: (id: number) => 
       this.request(`/propiedades/${id}`, { method: 'DELETE' }),
   };
+
+  // al final de la clase ApiClient, antes de cerrar la clase:
+activities = {
+  recent: (days = 5, limit = 25) =>
+    this.request(`/activities?sinceDays=${days}&limit=${limit}`),
+};
+
 }
 
 // Instancia singleton del cliente API

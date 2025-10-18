@@ -3,8 +3,8 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  ShoppingCart, 
+import {
+  ShoppingCart,
   Search,
   Filter,
   Plus,
@@ -61,7 +61,8 @@ export default function ClientDashboard() {
   const [showProfile, setShowProfile] = useState(false);
   const [loading, setLoading] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState('all');
-
+  const [adding, setAdding] = useState(false);
+  const [finalizing, setFinalizing] = useState(false); // evita doble clic en “Finalizar compra”
 
   const [products, setProducts] = useState<Product[]>([]);
 
@@ -88,45 +89,33 @@ export default function ClientDashboard() {
   };
 
   // Helpers para pintar texto sin romper el JSX
-const farmerNameOf = (p?: { farmer?: any } | null): string => {
-  if (!p || p.farmer == null) return '';
-  return typeof p.farmer === 'string' ? p.farmer : (p.farmer?.name ?? '');
-};
+  const farmerNameOf = (p?: { farmer?: any } | null): string => {
+    if (!p || p.farmer == null) return '';
+    return typeof p.farmer === 'string' ? p.farmer : (p.farmer?.name ?? '');
+  };
 
-const farmerLocationOf = (
-  p?: { farmer?: any; location?: string } | null
-): string => {
-  if (!p) return '';
-  // si farmer es string, usa location de raíz
-  if (typeof p.farmer === 'string') return p.location ?? '';
-  // si farmer es objeto, prioriza su location
-  return p.farmer?.location ?? p.location ?? '';
-};
+  const farmerLocationOf = (
+    p?: { farmer?: any; location?: string } | null
+  ): string => {
+    if (!p) return '';
+    // si farmer es string, usa location de raíz
+    if (typeof p.farmer === 'string') return p.location ?? '';
+    // si farmer es objeto, prioriza su location
+    return p.farmer?.location ?? p.location ?? '';
+  };
 
 
-  const handleBuyNow = async (product: Product): Promise<void> => {
+  const handleBuyNow = (product: Product): void => {
+    if (adding) return;
+    setAdding(true);
     try {
-      const currentUser = AuthService.getCurrentUser();
-      if (!currentUser) {
-        toast.error('Debes iniciar sesión para realizar compras');
-        return;
-      }
-
-      await OrderService.createOrder({
-        productId: product.id,
-        customerId: currentUser.id,
-        quantity: productQuantity,
-        notes: 'Compra desde marketplace'
-      });
-      
-      addToCart(product, productQuantity);
+      addToCart(product, productQuantity);   // ← solo carrito
       setSelectedProduct(null);
       setProductQuantity(1);
       setShowCart(true);
       toast.success('¡Producto agregado al carrito!');
-    } catch (error) {
-      console.error('Error creating order:', error);
-      toast.error('Error al procesar la compra');
+    } finally {
+      setAdding(false);
     }
   };
 
@@ -205,7 +194,7 @@ const farmerLocationOf = (
       <header className="bg-white/95 backdrop-blur-sm shadow-lg sticky top-0 z-40">
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            <motion.div 
+            <motion.div
               className="flex items-center space-x-3"
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -236,18 +225,18 @@ const farmerLocationOf = (
                   </Badge>
                 )}
               </Button>
-              
-          <Button
-               variant="ghost"
-               size="sm"
-               onClick={() => setShowProfile(!showProfile)}
-            >
-               <Avatar className="h-8 w-8">
-                   <AvatarFallback>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowProfile(!showProfile)}
+              >
+                <Avatar className="h-8 w-8">
+                  <AvatarFallback>
                     <User className="h-5 w-5 text-blue-600" />
                   </AvatarFallback>
-               </Avatar>
-            </Button>
+                </Avatar>
+              </Button>
             </div>
           </div>
         </div>
@@ -268,8 +257,8 @@ const farmerLocationOf = (
               <p className="text-sm text-gray-500">cliente@agroglobal.com</p>
             </div>
             <div className="p-2">
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 className="w-full justify-start text-red-600 hover:bg-red-50"
                 onClick={handleLogout}
               >
@@ -283,7 +272,7 @@ const farmerLocationOf = (
 
       <div className="container mx-auto px-6 py-8">
         {/* Welcome Section */}
-        <motion.div 
+        <motion.div
           className="mb-8"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -298,7 +287,7 @@ const farmerLocationOf = (
         </motion.div>
 
         {/* Search and Filters */}
-        <motion.div 
+        <motion.div
           className="mb-8"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -323,11 +312,10 @@ const farmerLocationOf = (
                 key={category.id}
                 variant={categoryFilter === category.id ? "default" : "outline"}
                 onClick={() => setCategoryFilter(category.id)}
-                className={`${
-                  categoryFilter === category.id
+                className={`${categoryFilter === category.id
                     ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white'
                     : 'border-gray-200 hover:bg-blue-50'
-                }`}
+                  }`}
               >
                 <span className="mr-2">{category.icon}</span>
                 {category.name}
@@ -346,65 +334,65 @@ const farmerLocationOf = (
               </div>
             </div>
           ) : (
-          filteredProducts.map((product, index) => (
-            <motion.div
-              key={product.id}
-              initial={{ opacity: 0, y: 50 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: index * 0.1 }}
-            >
-              <Card className="group hover:shadow-2xl hover:shadow-blue-500/10 transition-all duration-500 border-0 bg-white overflow-hidden cursor-pointer transform hover:scale-105">
-                <div className="relative h-48 overflow-hidden">
-                  <img 
-                    src={product.image} 
-                    alt={product.name}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                  />
-                  {/* <div className="absolute top-3 right-3">
+            filteredProducts.map((product, index) => (
+              <motion.div
+                key={product.id}
+                initial={{ opacity: 0, y: 50 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
+              >
+                <Card className="group hover:shadow-2xl hover:shadow-blue-500/10 transition-all duration-500 border-0 bg-white overflow-hidden cursor-pointer transform hover:scale-105">
+                  <div className="relative h-48 overflow-hidden">
+                    <img
+                      src={product.image}
+                      alt={product.name}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                    />
+                    {/* <div className="absolute top-3 right-3">
                     <Badge className="bg-white/90 text-gray-700 flex items-center space-x-1">
                       <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
                       <span>{product.rating}</span>
                     </Badge>
                   </div> */}
-                  <div className="absolute top-3 left-3">
-                    <Badge className="bg-green-500 text-white">
-                      {product.stock} disponibles
-                    </Badge>
-                  </div>
-                </div>
-                <CardContent className="p-4">
-                  <div className="mb-3">
-                    <h3 className="text-lg font-bold text-gray-900 mb-1 group-hover:text-blue-700 transition-colors duration-300">
-                      {product.name}
-                    </h3>
-                    <p className="text-sm text-gray-500">
-                     Por: {farmerNameOf(product)} • {farmerLocationOf(product)}
-                    </p>
-
-                  </div>
-                  
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <span className="text-2xl font-bold text-green-600">
-                        ₡{product.price.toLocaleString()}
-                      </span>
-                      <span className="text-sm text-gray-500 ml-1">
-                        /{product.unit}
-                      </span>
+                    <div className="absolute top-3 left-3">
+                      <Badge className="bg-green-500 text-white">
+                        {product.stock} disponibles
+                      </Badge>
                     </div>
                   </div>
+                  <CardContent className="p-4">
+                    <div className="mb-3">
+                      <h3 className="text-lg font-bold text-gray-900 mb-1 group-hover:text-blue-700 transition-colors duration-300">
+                        {product.name}
+                      </h3>
+                      <p className="text-sm text-gray-500">
+                        Por: {farmerNameOf(product)} • {farmerLocationOf(product)}
+                      </p>
 
-                  <Button 
-                    className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white shadow-lg hover:shadow-xl transition-all duration-300"
-                    onClick={() => setSelectedProduct(product)}
-                  >
-                    <ShoppingCart className="mr-2 h-4 w-4" />
-                    Comprar Ahora
-                  </Button>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))
+                    </div>
+
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <span className="text-2xl font-bold text-green-600">
+                          ₡{product.price.toLocaleString()}
+                        </span>
+                        <span className="text-sm text-gray-500 ml-1">
+                          /{product.unit}
+                        </span>
+                      </div>
+                    </div>
+
+                    <Button
+                      className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+                      onClick={() => setSelectedProduct(product)}
+                    >
+                      <ShoppingCart className="mr-2 h-4 w-4" />
+                      Comprar Ahora
+                    </Button>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))
           )}
         </div>
       </div>
@@ -428,8 +416,8 @@ const farmerLocationOf = (
               onClick={(e) => e.stopPropagation()}
             >
               <div className="relative">
-                <img 
-                  src={selectedProduct.image} 
+                <img
+                  src={selectedProduct.image}
                   alt={selectedProduct.name}
                   className="w-full h-80 object-cover"
                 />
@@ -440,7 +428,7 @@ const farmerLocationOf = (
                   <X className="h-5 w-5" />
                 </button>
               </div>
-              
+
               <div className="p-8">
                 <div className="mb-6">
                   <h2 className="text-3xl font-bold text-gray-900 mb-2">
@@ -450,9 +438,9 @@ const farmerLocationOf = (
                     {selectedProduct.description}
                   </p>
                   <div className="flex items-center space-x-4 text-sm text-gray-500">
-                     <span>Productor: {farmerNameOf(selectedProduct)}</span>
-                     <span>•</span>
-                     <span>Ubicación: {farmerLocationOf(selectedProduct)}</span>
+                    <span>Productor: {farmerNameOf(selectedProduct)}</span>
+                    <span>•</span>
+                    <span>Ubicación: {farmerLocationOf(selectedProduct)}</span>
                     <span>•</span>
                     {/* <Badge className="bg-green-100 text-green-700 flex items-center space-x-1">
                       <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
@@ -470,7 +458,7 @@ const farmerLocationOf = (
                       /{selectedProduct.unit}
                     </span>
                   </div>
-                  
+
                   <div className="flex items-center space-x-3">
                     <Button
                       variant="outline"
@@ -504,14 +492,15 @@ const farmerLocationOf = (
                 </div>
 
                 <div className="flex space-x-4">
-                  <Button 
-                    className="flex-1 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white py-3 shadow-lg hover:shadow-xl transition-all duration-300"
+                  <Button
+                    className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white py-3 shadow-lg hover:shadow-xl transition-all duration-300"
                     onClick={() => handleBuyNow(selectedProduct)}
+                    disabled={adding}
                   >
                     <ShoppingCart className="mr-2 h-5 w-5" />
-                    Comprar Ahora
+                    {adding ? 'Agregando…' : 'Comprar Ahora'}
                   </Button>
-                  <Button 
+                  <Button
                     variant="outline"
                     className="flex-1 border-blue-200 hover:bg-blue-50 text-blue-700 py-3"
                     onClick={() => handleAddToCart(selectedProduct)}
@@ -561,7 +550,7 @@ const farmerLocationOf = (
                   <div className="text-center py-12">
                     <Package className="h-16 w-16 text-gray-300 mx-auto mb-4" />
                     <p className="text-xl text-gray-500 mb-4">Tu carrito está vacío</p>
-                    <Button 
+                    <Button
                       onClick={() => setShowCart(false)}
                       className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white"
                     >
@@ -579,18 +568,18 @@ const farmerLocationOf = (
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ duration: 0.3 }}
                         >
-                          <img 
-                            src={item.image} 
+                          <img
+                            src={item.image}
                             alt={item.name}
                             className="w-20 h-20 object-cover rounded-lg"
                           />
-                          
+
                           <div className="flex-1">
                             <h3 className="text-lg font-semibold text-gray-900">
                               {item.name}
                             </h3>
                             <p className="text-sm text-gray-500">
-                                Por: {farmerNameOf(item)} • {farmerLocationOf(item)}
+                              Por: {farmerNameOf(item)} • {farmerLocationOf(item)}
                             </p>
 
                             <p className="text-lg font-bold text-green-600">
@@ -653,7 +642,7 @@ const farmerLocationOf = (
                       </div>
 
                       <div className="flex space-x-4">
-                        <Button 
+                        <Button
                           variant="outline"
                           className="flex-1 border-gray-300 hover:bg-gray-50"
                           onClick={() => setShowCart(false)}
@@ -661,31 +650,45 @@ const farmerLocationOf = (
                           <ArrowLeft className="mr-2 h-5 w-5" />
                           Continuar Comprando
                         </Button>
-                        <Button 
+                        <Button
                           className="flex-1 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white py-3 shadow-lg hover:shadow-xl transition-all duration-300"
-                          onClick={async (): Promise<void> => {
+                          disabled={finalizing || cart.length === 0}
+                          onClick={async () => {
+                            if (finalizing) return;
+                            setFinalizing(true);
                             try {
-                              // Procesar todas las órdenes del carrito
+                              const me = AuthService.getCurrentUser();
+                              if (!me?.id) {
+                                toast.error('Debes iniciar sesión para comprar');
+                                setFinalizing(false);
+                                return;
+                              }
+
+                              // Crea una orden por ítem del carrito (SOLO aquí)
                               for (const item of cart) {
                                 await OrderService.createOrder({
                                   productId: item.id,
-                                  customerId: 1,
+                                  customerId: me.id,
                                   quantity: item.quantity,
-                                  notes: 'Compra finalizada desde carrito'
+                                  notes: 'Compra finalizada desde carrito',
                                 });
                               }
+
                               toast.success('¡Compra realizada con éxito! El agricultor será notificado.');
-                            } catch (error) {
-                              console.error('Error processing orders:', error);
-                              toast.success('¡Compra realizada con éxito! (Modo demo)');
+                              setCart([]);
+                              setShowCart(false);
+                            } catch (err) {
+                              console.error('Error processing orders:', err);
+                              toast.error('No se pudo completar la compra');
+                            } finally {
+                              setFinalizing(false);
                             }
-                            setCart([]);
-                            setShowCart(false);
                           }}
                         >
                           <ShoppingCart className="mr-2 h-5 w-5" />
-                          Finalizar Compra
+                          {finalizing ? 'Procesando…' : 'Finalizar Compra'}
                         </Button>
+
                       </div>
                     </div>
                   </>
