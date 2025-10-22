@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Crown, Users, Package, ShoppingCart, Store, Camera, Building2, TrendingUp, UserCheck, UserX, Eye, CreditCard as Edit, Trash2, Plus, Search, Filter, MoveHorizontal as MoreHorizontal, CircleCheck as CheckCircle, Circle as XCircle, CircleAlert as AlertCircle, ChartBar as BarChart3, ChartPie as PieChart, DollarSign, Leaf, LogOut, Settings, Bell, RefreshCw, Download, Upload, Mail, Phone, MapPin, Calendar, Clock, Star, Award, Target, Zap, X, Save, Check, Key, Edit3, Square, Edit2, LucideEdit3, Edit3Icon, Activity as ActivityIcon, } from 'lucide-react';
+import { Crown, Users, Package, ShoppingCart, Store, Camera, Building2, TrendingUp, UserCheck, UserX, Eye, CreditCard as Edit, Trash2, Plus, Search, Filter, MoveHorizontal as MoreHorizontal, CircleCheck as CheckCircle, Circle as XCircle, CircleAlert as AlertCircle, ChartBar as BarChart3, ChartPie as PieChart, DollarSign, Leaf, LogOut, Settings, Bell, RefreshCw, Download, Upload, Mail, Phone, MapPin, Calendar, Clock, Star, Award, Target, Zap, X, Save, Check, Key, Edit3, Square, Edit2, LucideEdit3, Edit3Icon, Activity as ActivityIcon, Sun, Moon, } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -152,6 +152,7 @@ export default function AdminDashboard() {
   const [showProductDetails, setShowProductDetails] = useState<Product | null>(null);
   const [backendConnected, setBackendConnected] = useState(false);
   const [activities, setActivities] = useState<Activity[]>([]);
+  const [darkSidebar, setDarkSidebar] = useState(false);
   const [vetShopForm, setVetShopForm] = useState({
     name: '',
     email: '',
@@ -420,7 +421,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (!backendConnected) return;
     loadActivities();
-    const id = setInterval(loadActivities, 60000); // refresco 60s
+    const id = setInterval(loadActivities, 30000); // refresco 60s
     return () => clearInterval(id);
   }, [backendConnected]);
 
@@ -432,6 +433,7 @@ export default function AdminDashboard() {
       toast.success('Usuario activado exitosamente');
       await loadUsers();
       await loadStatistics();
+      await loadActivities();
     } catch (error: any) {
       console.error('Error activating user:', error);
       toast.error('Error al activar usuario');
@@ -444,6 +446,7 @@ export default function AdminDashboard() {
       toast.success('Usuario desactivado exitosamente');
       await loadUsers();
       await loadStatistics();
+      await loadActivities();
     } catch (error) {
       console.error('Error deactivating user:', error);
       toast.error('Error al desactivar usuario');
@@ -471,6 +474,7 @@ export default function AdminDashboard() {
       toast.success('Producto aprobado exitosamente');
       await loadProducts();
       await loadStatistics();
+      await loadActivities();
     } catch (error) {
       console.error('Error approving product:', error);
       toast.error('Error al aprobar producto');
@@ -483,6 +487,7 @@ export default function AdminDashboard() {
       toast.success('Producto rechazado exitosamente');
       await loadProducts();
       await loadStatistics();
+      await loadActivities();
     } catch (error) {
       console.error('Error rejecting product:', error);
       toast.error('Error al rechazar producto');
@@ -496,6 +501,7 @@ export default function AdminDashboard() {
       toast.success('Estado de agro veterinaria actualizado');
       await loadVetShops();
       await loadStatistics();
+      await loadActivities();
     } catch (error) {
       console.error('Error toggling vet shop:', error);
       toast.error('Error al actualizar agro veterinaria');
@@ -528,7 +534,7 @@ export default function AdminDashboard() {
           },
         };
       });
-
+      await loadActivities();
       toast.success('Agro veterinaria creada exitosamente');
       setShowAddVetShop(false);
       setVetShopForm({ name: '', email: '', phone: '', location: '', address: '', image: '' });
@@ -585,8 +591,8 @@ export default function AdminDashboard() {
     USER_CREATED: { color: 'bg-blue-500', Icon: UserCheck },
     USER_STATUS_CHANGED: { color: 'bg-cyan-500', Icon: UserCheck },
     PRODUCT_SUBMITTED: { color: 'bg-yellow-500', Icon: AlertCircle },
-    PRODUCT_APPROVED: { color: 'bg-green-500', Icon: CheckCircle },
-    PRODUCT_REJECTED: { color: 'bg-red-500', Icon: XCircle },
+    PRODUCT_APPROVED: { color: 'bg-green-500', Icon: Package },
+    PRODUCT_REJECTED: { color: 'bg-red-500', Icon: Package },
     VETSHOP_CREATED: { color: 'bg-purple-500', Icon: Building2 },
     VETSHOP_TOGGLED: { color: 'bg-indigo-500', Icon: Building2 },
   };
@@ -668,7 +674,7 @@ export default function AdminDashboard() {
           <div className="col-span-full">
             <Card className="bg-white border-0 shadow-lg">
               <CardContent className="p-6">
-                <h3 className="text-xl font-bold text-gray-900 mb-4">Actividad Reciente</h3>
+                <h3 className="text-xl font-bold text-gray-900 mb-4">Actividad Reciente... 🕒</h3>
 
                 {activities.length === 0 ? (
                   <div className="text-center py-10 text-gray-500">
@@ -1140,36 +1146,71 @@ export default function AdminDashboard() {
       </AnimatePresence>
 
       <div className="flex">
-        {/* Sidebar */}
-        <div className="w-64 bg-white/95 backdrop-blur-sm shadow-lg h-screen sticky top-0">
-          <div className="p-6">
-            <nav className="space-y-2">
-              {sidebarItems.map((item) => (
-                <Button
-                  key={item.id}
-                  variant={activeSection === item.id ? "default" : "ghost"}
-                  className={`w-full justify-start ${activeSection === item.id
-                    ? 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white'
-                    : 'hover:bg-purple-50'
-                    }`}
-                  onClick={() => setActiveSection(item.id)}
-                >
-                  {item.icon}
-                  <span className="ml-3">{item.name}</span>
-                </Button>
-              ))}
-            </nav>
-          </div>
-        </div>
+  {/* Sidebar fijo */}
+ <aside
+  className={`w-60 flex flex-col justify-between fixed left-0 top-[84px] h-[calc(100vh-84px)] transition-colors duration-300 z-40 ${
+    darkSidebar
+      ? 'bg-[#0f172a] text-white shadow-[inset_-4px_0_8px_rgba(0,0,0,0.2)]'
+      : 'bg-white text-black shadow-[4px_0_8px_rgba(0,0,0,0.05)]'
+  }`}
+>
 
-        {/* Main Content */}
-        <div className="flex-1 p-8">
-          {activeSection === 'dashboard' && renderDashboard()}
-          {activeSection === 'users' && renderUsers()}
-          {activeSection === 'products' && renderProducts()}
-          {activeSection === 'vetshops' && renderVetShops()}
-        </div>
-      </div>
+    {/* Navegación */}
+    <div className="p-6 flex-1">
+      <nav className="space-y-2">
+        {sidebarItems.map((item) => (
+          <Button
+            key={item.id}
+            variant={activeSection === item.id ? "default" : "ghost"}
+            className={`w-full justify-start transition-colors ${
+              activeSection === item.id
+                ? darkSidebar
+                  ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white'
+                  : 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white'
+                : darkSidebar
+                  ? 'hover:bg-[#1e293b] hover:text-white'
+                  : 'hover:bg-purple-50'
+            }`}
+            onClick={() => setActiveSection(item.id)}
+          >
+            {item.icon}
+            <span className="ml-3">{item.name}</span>
+          </Button>
+        ))}
+      </nav>
+    </div>
+
+    {/* Footer: modo claro/oscuro */}
+    <div
+      className={`p-4 border-t ${
+        darkSidebar ? 'border-gray-700' : 'border-gray-200'
+      } flex items-center justify-between`}
+    >
+      <span className={`text-sm ${darkSidebar ? 'text-gray-300' : 'text-gray-600'}`}>
+        {darkSidebar ? 'Modo Claro' : 'Modo Oscuro'}
+      </span>
+      <button
+        onClick={() => setDarkSidebar(!darkSidebar)}
+        className="focus:outline-none hover:text-yellow-400 transition-colors"
+        title="Cambiar modo"
+      >
+        {darkSidebar ? (
+          <Sun className="h-5 w-5 text-yellow-400" />
+        ) : (
+          <Moon className="h-5 w-5 text-gray-500" />
+        )}
+      </button>
+    </div>
+  </aside>
+
+  {/* Contenido principal */}
+  <main className="flex-1 ml-60 p-8 overflow-y-auto">
+    {activeSection === 'dashboard' && renderDashboard()}
+    {activeSection === 'users' && renderUsers()}
+    {activeSection === 'products' && renderProducts()}
+    {activeSection === 'vetshops' && renderVetShops()}
+  </main>
+</div>
 
       {/* Modales */}
       {/* Modal de detalles de usuario */}

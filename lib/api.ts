@@ -105,10 +105,15 @@ if (!response.ok) {
   const contentType = response.headers.get('content-type') || '';
   const raw = await response.text();          // puede venir vacío
 
+  const isGet = (options.method || 'GET').toUpperCase() === 'GET';
+   const finalUrl = isGet ? `${url}${url.includes('?') ? '&' : '?'}t=${Date.now()}` : url;
+
+
   if (!raw) return null;                      // ⬅️ evita json() con vacío
   if (contentType.includes('application/json')) {
     try { return JSON.parse(raw); } catch { return raw; }
   }
+
   return raw;
 }
 
