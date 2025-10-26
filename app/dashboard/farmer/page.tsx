@@ -10,7 +10,10 @@ import {
   CheckCircle,
   Clock,
   Eye,
-  Minus,ArrowLeft
+  Minus,ArrowLeft,Briefcase, ChevronDown, ChevronUp,
+  ChevronRight,
+  Bot,
+  ClipboardList
 } from 'lucide-react';
 
 
@@ -32,6 +35,9 @@ import { ProductCategory, ProductStatus } from '@/app/types/product';
 import { OrderService } from '@/services/order.service';
 import type { Order as OrderApi } from '@/lib/api';
 import { VetShopService } from '@/services/vetshop.service';
+
+import { AIAssistant } from '@/components/ui/ai-assistant';
+
 
 // Tipo “UI” para lo que pintamos
 type OrderUI = {
@@ -154,7 +160,12 @@ export default function FarmerDashboard() {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<'all' | 'frutas' | 'verduras' | 'granos'>('all');
   const currentUser = AuthService.getCurrentUser(); // { id, email, role, ... }
+  
+  const [darkSidebar, setDarkSidebar] = useState(false);
 
+  // Estado para controlar si el menú "Gestión Comercial" está desplegado o no
+const [isCommercialOpen, setIsCommercialOpen] = useState(true);
+  
   // Modales
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [showAddBitacora, setShowAddBitacora] = useState(false);
@@ -1005,6 +1016,18 @@ const handleAddToCart = (product: ProductUI): void => {
     </div>
   );
 
+  const renderAsistenteIA = () => (
+  <div className="flex flex-col items-center justify-center min-h-[80vh]">
+    <div className="w-full max-w-4xl mx-auto bg-white rounded-2xl shadow-2xl p-8 border border-gray-100">
+      <h2 className="text-3xl font-bold text-center mb-6 text-green-700">
+        Asistente Agrícola 🤖
+      </h2>
+      <AIAssistant />
+    </div>
+  </div>
+);
+
+
   const toProcessing = async (id: number) => {
     // optimista
     setOrders(prev => prev.map(o => o.id === id ? { ...o, status: 'processing' } : o));
@@ -1473,12 +1496,13 @@ const handleAddToCart = (product: ProductUI): void => {
       case 'bitacora': return renderBitacora();
       case 'cultivos': return renderCultivos();
       case 'propiedades': return renderPropiedades();
+      case 'ia': return renderAsistenteIA(); // 👈 agregado
       default: return renderMarketplace();
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-50">
+    <div className={`min-h-screen transition-colors duration-300 ${darkSidebar? "bg-[#0f172a] text-white": "bg-gradient-to-br from-green-50 via-emerald-50 to-green-100 text-gray-900"}`}>
       {/* Header */}
       <header className="bg-white/95 backdrop-blur-sm shadow-lg sticky top-0 z-40">
         <div className="container mx-auto px-6 py-4">
@@ -1541,34 +1565,113 @@ const handleAddToCart = (product: ProductUI): void => {
         )}
       </AnimatePresence>
 
-      <div className="flex">
-        {/* Sidebar */}
-        <div className="w-64 bg-white shadow-lg min-h-screen">
-          <div className="p-6">
-            <nav className="space-y-2">
-              {sidebarItems.map((item) => (
-                <Button
-                  key={item.id}
-                  variant={activeSection === item.id ? 'default' : 'ghost'}
-                  className={`w-full justify-start ${activeSection === item.id ? 'bg-green-500 text-white hover:bg-green-600' : 'hover:bg-green-50'}`}
-                  onClick={() => setActiveSection(item.id)}
-                >
-                  {item.icon}<span className="ml-3">{item.name}</span>
-                </Button>
-              ))}
-            </nav>
-          </div>
-        </div>
+      <div className="flex h-[calc(100vh-80px)] overflow-hidden">
+ {/* Sidebar */}
+{/* Sidebar */}
+<div className="w-64 bg-white dark:bg-gray-900 shadow-lg border-r border-gray-200 dark:border-gray-700 flex-shrink-0 h-screen sticky top-0">
+  <div className="p-6 space-y-2">
+    {/* --- ASISTENTE IA --- */}
+    <Button
+      onClick={() => {
+        setActiveSection("ia");
+        setIsCommercialOpen(false); // cierra gestión comercial
+      }}
+      className={`w-full justify-start text-base font-semibold py-4 transition-all duration-200 rounded-lg ${
+        activeSection === "ia"
+          ? "bg-gradient-to-r from-green-400 to-green-500 text-white shadow-md"
+          : "bg-white hover:bg-green-50 text-gray-800"
+      }`}
+    >
+      <Bot className="h-5 w-5 mr-2" />
+      Asistente IA
+    </Button>
 
-        {/* Main Content */}
-        <div className="flex-1 p-8">
-          <AnimatePresence mode="wait">
-            <motion.div key={activeSection} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.3 }}>
-              {renderContent()}
-            </motion.div>
-          </AnimatePresence>
-        </div>
+    {/* --- GESTIÓN COMERCIAL (con dropdown) --- */}
+    <Button
+      onClick={() => {
+        const next = !isCommercialOpen;
+        setIsCommercialOpen(next);
+        setActiveSection("commercial");
+        if (!next) setActiveSection(""); // si se cierra, desmarca el botón
+      }}
+      className={`w-full justify-between text-base font-semibold py-4 transition-all duration-200 rounded-lg ${
+        activeSection === "commercial" && isCommercialOpen
+          ? "bg-gradient-to-r from-green-400 to-green-500 text-white shadow-md"
+          : "bg-white hover:bg-green-50 text-gray-800"
+      }`}
+    >
+      <div className="flex items-center">
+        <Briefcase className="h-5 w-5 mr-2" />
+        Gestión Comercial
       </div>
+      <motion.div
+        animate={{ rotate: isCommercialOpen ? 90 : 0 }}
+        transition={{ duration: 0.2 }}
+      >
+        <ChevronRight className="h-4 w-4" />
+      </motion.div>
+    </Button>
+
+    {/* --- SUBMENÚ --- */}
+    <AnimatePresence>
+      {isCommercialOpen && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: "auto" }}
+          exit={{ opacity: 0, height: 0 }}
+          transition={{ duration: 0.3 }}
+          className="ml-6 mt-2 space-y-1 overflow-hidden"
+        >
+          {[
+            { id: "marketplace", name: "Marketplace", icon: <ShoppingCart className="h-5 w-5" /> },
+            { id: "ofertas", name: "Mis Ofertas", icon: <Package className="h-5 w-5" /> },
+            { id: "tienda", name: "Tienda", icon: <Store className="h-5 w-5" /> },
+            { id: "ordenes", name: "Órdenes", icon: <ClipboardList className="h-5 w-5" /> },
+            { id: "bitacora", name: "Bitácora", icon: <BookOpen className="h-5 w-5" /> },
+            { id: "propiedades", name: "Propiedades", icon: <Home className="h-5 w-5" /> },
+            { id: "cultivos", name: "Cultivos", icon: <Sprout className="h-5 w-5" /> },
+          ].map((item) => (
+            <Button
+              key={item.id}
+              size="sm"
+              onClick={() => setActiveSection(item.id)}
+              className={`w-full justify-start transition-all duration-200 rounded-md ${
+                activeSection === item.id
+                  ? "bg-gradient-to-r from-green-400 to-green-500 text-white shadow"
+                  : "bg-white hover:bg-green-50 text-gray-700 "
+              }`}
+            >
+              {item.icon}
+              <span className="ml-3">{item.name}</span>
+            </Button>
+          ))}
+        </motion.div>
+      )}
+    </AnimatePresence>
+  </div>
+</div>
+
+
+  {/* Contenido principal */}
+  <div
+    className={`flex-1 overflow-y-auto bg-gradient-to-br from-green-50 to-emerald-50 p-8 ${
+      activeSection === "ia" ? "col-span-2" : ""
+    }`}
+  >
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={activeSection}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -20 }}
+        transition={{ duration: 0.3 }}
+      >
+        {renderContent()}
+      </motion.div>
+    </AnimatePresence>
+  </div>
+</div>
+
 
       {/* Modal Agregar/Editar Producto */}
       <AnimatePresence>
