@@ -1,37 +1,21 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Bot, 
-  Send, 
-  MessageCircle, 
-  History, 
-  BookOpen, 
-  Sparkles,
-  User,
-  Leaf,
-  X,
-  Plus,
-  Search,
-  Filter,
-  Clock,
-  Star,
-  ChevronRight,
-  Lightbulb,
-  TrendingUp,
-  Shield
-} from 'lucide-react';
+import { Bot, Send, MessageCircle, History, BookOpen, Sparkles, User, Leaf, X, Plus, Search, Filter, Clock, Star, ChevronRight, Lightbulb, TrendingUp, Shield, CircleAlert as AlertCircle, Loader as Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { aiService, suggestedQuestions } from '@/lib/ai-service';
+import { toast } from 'sonner';
 
 interface Message {
   id: number;
   type: 'user' | 'ai';
   content: string;
+  isError?: boolean;
   timestamp: string;
 }
 
@@ -58,12 +42,23 @@ export function AIAssistant() {
     {
       id: 1,
       type: 'ai',
-      content: '¡Hola! Soy tu Asistente Agrícola de AgroGlobal 🌱. Estoy aquí para ayudarte con cualquier consulta sobre cultivos, plagas, fertilización, y más. ¿En qué puedo asistirte hoy?',
-      timestamp: '10:30 AM'
+      content: '¡Hola! Soy AgroBot, tu Asistente Agrícola de AgroGlobal 🌱. Estoy aquí para ayudarte con cualquier consulta sobre cultivos, plagas, fertilización, riego y más. ¿En qué puedo asistirte hoy?',
+      timestamp: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
     }
   ]);
   const [inputMessage, setInputMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Scroll automático a nuevos mensajes
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, isTyping]);
 
   // Datos de ejemplo para historial
   const consultations: Consultation[] = [
@@ -125,27 +120,16 @@ export function AIAssistant() {
       icon: <MessageCircle className="h-5 w-5" />,
       description: 'Inicia una nueva conversación'
     },
-    {
-      id: 'history',
-      name: 'Historial de Consultas',
-      icon: <History className="h-5 w-5" />,
-      description: 'Revisa consultas anteriores'
-    },
-    {
-      id: 'resources',
-      name: 'Biblioteca de Recursos',
-      icon: <BookOpen className="h-5 w-5" />,
-      description: 'Accede a guías y materiales'
-    }
   ];
 
-  const handleSendMessage = () => {
-    if (!inputMessage.trim()) return;
+  const handleSendMessage = async (messageText?: string) => {
+    const textToSend = messageText || inputMessage;
+    if (!textToSend.trim() || isLoading) return;
 
     const newMessage: Message = {
       id: messages.length + 1,
       type: 'user',
-      content: inputMessage,
+      content: textToSend,
       timestamp: new Date().toLocaleTimeString('es-ES', { 
         hour: '2-digit', 
         minute: '2-digit' 
@@ -155,30 +139,55 @@ export function AIAssistant() {
     setMessages(prev => [...prev, newMessage]);
     setInputMessage('');
     setIsTyping(true);
+    setIsLoading(true);
 
-    // Simular respuesta de IA
-    setTimeout(() => {
+    try {
+      const conversationHistory = [...messages, newMessage].map(msg => ({
+        role: msg.type === 'user' ? 'user' as const : 'assistant' as const,
+        content: msg.content
+      }));
+
+      const response = await aiService.sendMessage(conversationHistory);
+      
+      // Verificar si la respuesta es un error
+      const isError = response.startsWith('Error:');
+      
       const aiResponse: Message = {
         id: messages.length + 2,
         type: 'ai',
-        content: generateAIResponse(inputMessage),
+        content: response,
+        isError: isError,
         timestamp: new Date().toLocaleTimeString('es-ES', { 
           hour: '2-digit', 
           minute: '2-digit' 
         })
       };
+      
       setMessages(prev => [...prev, aiResponse]);
+    } catch (error) {
+      console.error('Error al enviar mensaje:', error);
+      
+      const errorMessage: Message = {
+        id: messages.length + 2,
+        type: 'ai',
+        content: 'Lo siento, hubo un problema de conexión. Verifica tu internet e intenta nuevamente. Si el problema persiste, puede ser un límite temporal de la API gratuita.',
+        isError: true,
+        timestamp: new Date().toLocaleTimeString('es-ES', { 
+          hour: '2-digit', 
+          minute: '2-digit' 
+        })
+      };
+      
+      setMessages(prev => [...prev, errorMessage]);
+      toast.error('Error al conectar con AgroBot');
+    } finally {
       setIsTyping(false);
-    }, 2000);
+      setIsLoading(false);
+    }
   };
 
-  const generateAIResponse = (userMessage: string): string => {
-    const responses = [
-      'Excelente pregunta sobre agricultura. Basándome en las mejores prácticas agrícolas, te recomiendo considerar los siguientes aspectos: el tipo de suelo, las condiciones climáticas actuales y la época del año. ¿Podrías proporcionarme más detalles sobre tu cultivo específico?',
-      'Para abordar tu consulta de manera efectiva, es importante analizar varios factores. En primer lugar, el manejo integrado de cultivos es fundamental. Te sugiero implementar un enfoque holístico que incluya monitoreo regular, prácticas preventivas y tratamientos específicos según sea necesario.',
-      'Tu consulta es muy relevante para la agricultura moderna. Te recomiendo seguir las siguientes pautas: 1) Realizar un análisis de suelo, 2) Considerar las condiciones meteorológicas, 3) Implementar buenas prácticas agrícolas. ¿Te gustaría que profundice en alguno de estos puntos?'
-    ];
-    return responses[Math.floor(Math.random() * responses.length)];
+  const handleSuggestedQuestion = (question: string) => {
+    handleSendMessage(question);
   };
 
   const renderChat = () => (
@@ -193,15 +202,38 @@ export function AIAssistant() {
             <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white dark:border-gray-800"></div>
           </div>
           <div>
-            <h3 className="font-semibold text-gray-900 dark:text-white">Asistente Agrícola</h3>
-            <p className="text-sm text-green-600 dark:text-green-400">En línea • Listo para ayudar</p>
+            <h3 className="font-semibold text-gray-900 dark:text-white">AgroBot</h3>
+            <p className="text-sm text-green-600 dark:text-green-400">En línea • Especialista Agrícola</p>
           </div>
         </div>
         <Badge className="bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
           <Sparkles className="h-3 w-3 mr-1" />
-          IA Avanzada
+          IA Especializada
         </Badge>
       </div>
+
+      {/* Preguntas Sugeridas (solo si no hay conversación) */}
+      {messages.length <= 1 && (
+        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+          <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+            Preguntas sugeridas para empezar:
+          </h4>
+          <div className="grid grid-cols-1 gap-2">
+            {suggestedQuestions.map((question, index) => (
+              <Button
+                key={index}
+                variant="outline"
+                size="sm"
+                className="justify-start text-left h-auto py-2 px-3 text-sm hover:bg-green-50 dark:hover:bg-green-900/20"
+                onClick={() => handleSuggestedQuestion(question)}
+                disabled={isLoading}
+              >
+                {question}
+              </Button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Mensajes */}
       <div className="flex-1 overflow-y-auto p-6 space-y-4">
@@ -230,13 +262,23 @@ export function AIAssistant() {
               <div className={`rounded-2xl px-4 py-3 ${
                 message.type === 'user'
                   ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white'
-                  : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white'
+                  : message.isError 
+                    ? 'bg-red-50 border border-red-200 text-red-800'
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white'
               }`}>
-                <p className="text-sm leading-relaxed">{message.content}</p>
+                {message.isError && (
+                  <div className="flex items-center mb-2">
+                    <AlertCircle className="h-4 w-4 mr-2 text-red-600" />
+                    <span className="text-sm font-medium text-red-600">Error</span>
+                  </div>
+                )}
+                <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
                 <p className={`text-xs mt-2 ${
                   message.type === 'user' 
                     ? 'text-blue-100' 
-                    : 'text-gray-500 dark:text-gray-400'
+                    : message.isError
+                      ? 'text-red-500'
+                      : 'text-gray-500 dark:text-gray-400'
                 }`}>
                   {message.timestamp}
                 </p>
@@ -257,15 +299,18 @@ export function AIAssistant() {
                 <Bot className="h-4 w-4 text-white" />
               </div>
               <div className="bg-gray-100 dark:bg-gray-800 rounded-2xl px-4 py-3">
-                <div className="flex space-x-1">
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                <div className="flex items-center space-x-2">
+                  <Loader2 className="h-4 w-4 animate-spin text-green-600" />
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    AgroBot está pensando...
+                  </span>
                 </div>
               </div>
             </div>
           </motion.div>
         )}
+
+        <div ref={messagesEndRef} />
       </div>
 
       {/* Input de mensaje */}
@@ -278,6 +323,7 @@ export function AIAssistant() {
               placeholder="Escribe tu consulta agrícola aquí..."
               className="resize-none border-gray-200 dark:border-gray-700 focus:border-green-500 focus:ring-green-500 dark:bg-gray-800 dark:text-white"
               rows={2}
+              disabled={isLoading}
               onKeyPress={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault();
@@ -287,164 +333,17 @@ export function AIAssistant() {
             />
           </div>
           <Button
-            onClick={handleSendMessage}
-            disabled={!inputMessage.trim() || isTyping}
+            onClick={() => handleSendMessage()}
+            disabled={!inputMessage.trim() || isLoading}
             className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
           >
-            <Send className="h-4 w-4" />
+            {isLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
           </Button>
         </div>
-      </div>
-    </div>
-  );
-
-  const renderHistory = () => (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h3 className="text-xl font-bold text-gray-900 dark:text-white">Historial de Consultas</h3>
-          <p className="text-gray-600 dark:text-gray-400">Revisa tus consultas anteriores</p>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Button variant="outline" size="sm" className="dark:border-gray-600 dark:text-gray-300">
-            <Filter className="h-4 w-4 mr-2" />
-            Filtrar
-          </Button>
-          <Button variant="outline" size="sm" className="dark:border-gray-600 dark:text-gray-300">
-            <Search className="h-4 w-4 mr-2" />
-            Buscar
-          </Button>
-        </div>
-      </div>
-
-      <div className="space-y-4">
-        {consultations.map((consultation) => (
-          <motion.div
-            key={consultation.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer dark:bg-gray-800 dark:border-gray-700">
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-3 mb-2">
-                      <h4 className="font-semibold text-gray-900 dark:text-white">{consultation.title}</h4>
-                      <Badge className={`${
-                        consultation.status === 'resolved' 
-                          ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' 
-                          : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300'
-                      }`}>
-                        {consultation.status === 'resolved' ? 'Resuelto' : 'Pendiente'}
-                      </Badge>
-                    </div>
-                    <p className="text-gray-600 dark:text-gray-400 mb-3">{consultation.preview}</p>
-                    <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
-                      <div className="flex items-center space-x-1">
-                        <Clock className="h-4 w-4" />
-                        <span>{consultation.date}</span>
-                      </div>
-                      <Badge variant="outline" className="dark:border-gray-600 dark:text-gray-300">
-                        {consultation.category}
-                      </Badge>
-                    </div>
-                  </div>
-                  <ChevronRight className="h-5 w-5 text-gray-400" />
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        ))}
-      </div>
-    </div>
-  );
-
-  const renderResources = () => (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h3 className="text-xl font-bold text-gray-900 dark:text-white">Biblioteca de Recursos</h3>
-          <p className="text-gray-600 dark:text-gray-400">Guías, artículos y materiales educativos</p>
-        </div>
-        <Button className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white">
-          <Plus className="h-4 w-4 mr-2" />
-          Sugerir Recurso
-        </Button>
-      </div>
-
-      {/* Categorías destacadas */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <Card className="bg-gradient-to-r from-green-500 to-emerald-500 text-white cursor-pointer hover:shadow-lg transition-all duration-300">
-          <CardContent className="p-6 text-center">
-            <Leaf className="h-8 w-8 mx-auto mb-3" />
-            <h4 className="font-semibold mb-2">Cultivos</h4>
-            <p className="text-sm opacity-90">Guías de cultivo</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white cursor-pointer hover:shadow-lg transition-all duration-300">
-          <CardContent className="p-6 text-center">
-            <Shield className="h-8 w-8 mx-auto mb-3" />
-            <h4 className="font-semibold mb-2">Plagas</h4>
-            <p className="text-sm opacity-90">Control y prevención</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-gradient-to-r from-purple-500 to-pink-500 text-white cursor-pointer hover:shadow-lg transition-all duration-300">
-          <CardContent className="p-6 text-center">
-            <TrendingUp className="h-8 w-8 mx-auto mb-3" />
-            <h4 className="font-semibold mb-2">Técnicas</h4>
-            <p className="text-sm opacity-90">Métodos avanzados</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Lista de recursos */}
-      <div className="space-y-4">
-        {resources.map((resource) => (
-          <motion.div
-            key={resource.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer dark:bg-gray-800 dark:border-gray-700">
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start space-x-4 flex-1">
-                    <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-                      resource.type === 'guide' ? 'bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-400' :
-                      resource.type === 'video' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-400' :
-                      'bg-purple-100 text-purple-600 dark:bg-purple-900 dark:text-purple-400'
-                    }`}>
-                      {resource.type === 'guide' ? <BookOpen className="h-6 w-6" /> :
-                       resource.type === 'video' ? <Lightbulb className="h-6 w-6" /> :
-                       <Lightbulb className="h-6 w-6" />}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3 mb-2">
-                        <h4 className="font-semibold text-gray-900 dark:text-white">{resource.title}</h4>
-                      </div>
-                      <p className="text-gray-600 dark:text-gray-400 mb-3">{resource.description}</p>
-                      <div className="flex items-center space-x-3">
-                        <Badge variant="outline" className="dark:border-gray-600 dark:text-gray-300">
-                          {resource.category}
-                        </Badge>
-                        <Badge className={`${
-                          resource.type === 'guide' ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' :
-                          resource.type === 'video' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' :
-                          'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300'
-                        }`}>
-                          {resource.type === 'guide' ? 'Guía' : resource.type === 'video' ? 'Video' : 'Artículo'}
-                        </Badge>
-                      </div>
-                    </div>
-                  </div>
-                  <ChevronRight className="h-5 w-5 text-gray-400" />
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        ))}
       </div>
     </div>
   );
@@ -452,8 +351,6 @@ export function AIAssistant() {
   const renderContent = () => {
     switch (activeSection) {
       case 'chat': return renderChat();
-      case 'history': return renderHistory();
-      case 'resources': return renderResources();
       default: return renderChat();
     }
   };
@@ -468,14 +365,14 @@ export function AIAssistant() {
               <Bot className="h-7 w-7 text-white" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold">Asistente Agrícola</h2>
-              <p className="text-green-100">Inteligencia Artificial para el Campo</p>
+              <h2 className="text-2xl font-bold">AgroBot</h2>
+              <p className="text-green-100">Asistente Agrícola Inteligente</p>
             </div>
           </div>
           <div className="flex items-center space-x-2">
             <Badge className="bg-white/20 text-white border-white/30">
               <Sparkles className="h-3 w-3 mr-1" />
-              IA Avanzada
+              IA Especializada
             </Badge>
           </div>
         </div>

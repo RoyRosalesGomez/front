@@ -1565,8 +1565,8 @@ const handleAddToCart = (product: ProductUI): void => {
         )}
       </AnimatePresence>
 
-      <div className="flex h-[calc(100vh-80px)] overflow-hidden">
- {/* Sidebar */}
+      <div className="flex min-h-screen  pt-[0px]">
+
 {/* Sidebar */}
 <div className="w-64 bg-white dark:bg-gray-900 shadow-lg border-r border-gray-200 dark:border-gray-700 flex-shrink-0 h-screen sticky top-0">
   <div className="p-6 space-y-2">
