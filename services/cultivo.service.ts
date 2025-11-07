@@ -6,8 +6,8 @@ export class CultivoService {
     name: string;
     variedad: string;
     comentario?: string;
-    image?: string;
-    //farmerId: number;
+    image?: File | null;
+    farmerId: number;
   }) {
     try {
       return await api.cultivos.create(cultivoData);

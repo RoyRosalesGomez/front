@@ -35,6 +35,8 @@ import { ProductCategory, ProductStatus } from '@/app/types/product';
 import { OrderService } from '@/services/order.service';
 import type { Order as OrderApi } from '@/lib/api';
 import { VetShopService } from '@/services/vetshop.service';
+import Swal from 'sweetalert2';
+import { getCultivoImageUrl } from '@/lib/image-utils';
 
 import { AIAssistant } from '@/components/ui/ai-assistant';
 
@@ -228,6 +230,7 @@ const [isCommercialOpen, setIsCommercialOpen] = useState(true);
   const [cultivoForm, setCultivoForm] = useState({
     name: '', variedad: '', comentario: '', image: ''
   });
+  const [cultivoImageFile, setCultivoImageFile] = useState<File | null>(null);
   const [propiedadForm, setPropiedadForm] = useState({
     nombre: '', localizacion: '', tamano: '', comentario: ''
   });
@@ -338,10 +341,27 @@ const [isCommercialOpen, setIsCommercialOpen] = useState(true);
   };
 
   const handleToggleCultivo = async (id: number, currentActive?: boolean) => {
+    const cultivo = cultivos.find(c => c.id === id);
+    const action = currentActive ? 'desactivar' : 'activar';
+
+    const result = await Swal.fire({
+      title: `¿${action.charAt(0).toUpperCase() + action.slice(1)} cultivo?`,
+      text: `El cultivo "${cultivo?.name ?? ''}" será ${action === 'activar' ? 'activado' : 'desactivado'}`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: currentActive ? '#ef4444' : '#10b981',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: `Sí, ${action}`,
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (!result.isConfirmed) return;
+
     // optimista: refleja el cambio al instante
     setCultivos(prev => prev.map(c => c.id === id ? { ...c, active: !c.active } : c));
     try {
       await CultivoService.toggleActiveCultivo(id);
+      toast.success(`Cultivo ${action === 'activar' ? 'activado' : 'desactivado'}`);
     } catch (err) {
       // revierte si falla
       setCultivos(prev => prev.map(c => c.id === id ? { ...c, active: currentActive ?? c.active } : c));
@@ -503,10 +523,27 @@ const handleAddPropiedad = async (e: React.FormEvent) => {
 
   // NUEVO — activar/desactivar
   const handleTogglePropiedad = async (id: number, currentActive?: boolean) => {
+    const propiedad = propiedades.find(p => p.id === id);
+    const action = currentActive ? 'desactivar' : 'activar';
+
+    const result = await Swal.fire({
+      title: `¿${action.charAt(0).toUpperCase() + action.slice(1)} propiedad?`,
+      text: `La propiedad "${propiedad?.nombre ?? ''}" será ${action === 'activar' ? 'activada' : 'desactivada'}`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: currentActive ? '#ef4444' : '#10b981',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: `Sí, ${action}`,
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (!result.isConfirmed) return;
+
     // optimista
     setPropiedades(prev => prev.map(p => p.id === id ? ({ ...p, active: !p.active }) : p));
     try {
       await PropiedadService.toggleActivePropiedad(id);
+      toast.success(`Propiedad ${action === 'activar' ? 'activada' : 'desactivada'}`);
     } catch (e) {
       // revertir si falla
       setPropiedades(prev => prev.map(p => p.id === id ? ({ ...p, active: currentActive ?? p.active }) : p));
@@ -675,8 +712,18 @@ const handleAddPropiedad = async (e: React.FormEvent) => {
 
   // Eliminar
   const handleDeleteProduct = async (id: number, name?: string) => {
-    const ok = window.confirm(`¿Eliminar "${name ?? 'este producto'}"?`);
-    if (!ok) return;
+    const result = await Swal.fire({
+      title: '¿Estás seguro?',
+      text: `Se eliminará el producto "${name ?? 'este producto'}" permanentemente`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (!result.isConfirmed) return;
 
     // 1) Estado previo para revertir si falla
     const prev = myProducts;
@@ -768,8 +815,18 @@ const handleAddPropiedad = async (e: React.FormEvent) => {
 
   // Elimina por id (una sola función)
   const handleDeleteBitacora = async (id: number) => {
-    const ok = window.confirm('¿Eliminar esta entrada de la bitácora?');
-    if (!ok) return;
+    const result = await Swal.fire({
+      title: '¿Eliminar entrada?',
+      text: 'Esta entrada de la bitácora se eliminará permanentemente',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (!result.isConfirmed) return;
 
     const prev = bitacoraEntries;
     setBitacoraEntries((list) => list.filter((e) => e.id !== id)); // optimista
@@ -793,17 +850,24 @@ const handleAddPropiedad = async (e: React.FormEvent) => {
       return;
     }
 
+    if (!currentUser?.id) {
+      toast.error('No se pudo obtener el ID del usuario');
+      return;
+    }
+
     try {
       const created = await CultivoService.createCultivo({
         name: cultivoForm.name,
         variedad: cultivoForm.variedad,
         comentario: cultivoForm.comentario || undefined,
-        image: cultivoForm.image || undefined,
+        image: cultivoImageFile,
+        farmerId: currentUser.id,
       });
 
       toast.success('Cultivo agregado exitosamente');
       setShowAddCultivo(false);
       setCultivoForm({ name: '', variedad: '', comentario: '', image: '' });
+      setCultivoImageFile(null);
 
       // Si el backend devuelve el objeto creado:
       if (created && created.id) {
@@ -845,24 +909,43 @@ const handleAddPropiedad = async (e: React.FormEvent) => {
       return;
     }
 
-    try {
-      const payload = {
-        name: cultivoForm.name,
-        variedad: cultivoForm.variedad,
-        comentario: cultivoForm.comentario || undefined,
-        image: cultivoForm.image || undefined,
-      };
+    if (!currentUser?.id) {
+      toast.error('No se pudo obtener el ID del usuario');
+      return;
+    }
 
+    try {
       if (editingCultivoId == null) {
-        await CultivoService.createCultivo(payload);
+        // Crear nuevo cultivo
+        await CultivoService.createCultivo({
+          name: cultivoForm.name,
+          variedad: cultivoForm.variedad,
+          comentario: cultivoForm.comentario || undefined,
+          image: cultivoImageFile,
+          farmerId: currentUser.id,
+        });
         toast.success('Cultivo creado');
       } else {
+        // Actualizar cultivo existente
+        const payload: any = {
+          name: cultivoForm.name,
+          variedad: cultivoForm.variedad,
+          comentario: cultivoForm.comentario || undefined,
+        };
+
+        // Solo incluir la imagen si se seleccionó un nuevo archivo
+        if (cultivoImageFile) {
+          payload.image = cultivoImageFile;
+        }
+
         await CultivoService.updateCultivo(editingCultivoId, payload);
         toast.success('Cultivo actualizado');
       }
 
       setShowAddCultivo(false);
       setEditingCultivoId(null);
+      setCultivoForm({ name: '', variedad: '', comentario: '', image: '' });
+      setCultivoImageFile(null);
       await loadCultivos();
     } catch (err) {
       console.error('Error guardando cultivo:', err);
@@ -872,8 +955,19 @@ const handleAddPropiedad = async (e: React.FormEvent) => {
 
   // Eliminar
   const handleDeleteCultivo = async (id: number, name?: string) => {
-    const ok = window.confirm(`¿Eliminar "${name ?? 'este cultivo'}"?`);
-    if (!ok) return;
+    const result = await Swal.fire({
+      title: '¿Eliminar cultivo?',
+      text: `El cultivo "${name ?? 'este cultivo'}" se eliminará permanentemente`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (!result.isConfirmed) return;
+
     try {
       await CultivoService.deleteCultivo(id);
       toast.success('Cultivo eliminado');
@@ -1383,9 +1477,12 @@ const handleAddToCart = (product: ProductUI): void => {
           <Card key={c.id} className="flex flex-col overflow-hidden hover:shadow-lg transition-shadow">
             <div className="relative h-56 w-full">
               <img
-                src={c.image || 'https://images.pexels.com/photos/1458694/pexels-photo-1458694.jpeg'}
+                src={getCultivoImageUrl(c.image) || 'https://images.pexels.com/photos/1458694/pexels-photo-1458694.jpeg'}
                 alt={c.name}
                 className="h-full w-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.src = 'https://images.pexels.com/photos/1458694/pexels-photo-1458694.jpeg';
+                }}
               />
               <div className="absolute top-3 right-3">
                 <Badge className={`${c.active ? 'bg-green-500' : 'bg-red-500'} text-white`}>
@@ -1852,8 +1949,23 @@ const handleAddToCart = (product: ProductUI): void => {
                     <Textarea id="cultivoComentario" value={cultivoForm.comentario} onChange={(e) => setCultivoForm({ ...cultivoForm, comentario: e.target.value })} />
                   </div>
                   <div>
-                    <Label htmlFor="cultivoImage">URL de Imagen</Label>
-                    <Input id="cultivoImage" value={cultivoForm.image} onChange={(e) => setCultivoForm({ ...cultivoForm, image: e.target.value })} />
+                    <Label htmlFor="cultivoImage">Imagen del Cultivo</Label>
+                    <Input
+                      id="cultivoImage"
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setCultivoImageFile(file);
+                        }
+                      }}
+                    />
+                    {cultivoImageFile && (
+                      <p className="text-sm text-green-600 mt-2">
+                        Archivo seleccionado: {cultivoImageFile.name}
+                      </p>
+                    )}
                   </div>
                   <div className="flex gap-4">
                     <Button type="button" variant="outline" className="flex-1" onClick={() => setShowAddCultivo(false)}>Cancelar</Button>
