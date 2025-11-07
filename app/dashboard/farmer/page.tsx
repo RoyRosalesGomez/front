@@ -422,40 +422,52 @@ const [isCommercialOpen, setIsCommercialOpen] = useState(true);
 
   // Después de crear, recarga (o inserta optimista)
   // UPDATE — crear propiedad: añade al estado o recarga
-  const handleAddPropiedad = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!propiedadForm.nombre || !propiedadForm.localizacion || !propiedadForm.tamano) {
-      toast.error('Por favor completa los campos requeridos');
-      return;
-    }
-    try {
-      const created = await PropiedadService.createPropiedad({
-        nombre: propiedadForm.nombre,
-        localizacion: propiedadForm.localizacion,
-        tamano: propiedadForm.tamano,
-        comentario: propiedadForm.comentario || undefined,
-        farmerId: currentUser?.id ?? 1
-      });
+const handleAddPropiedad = async (e: React.FormEvent) => {
+  e.preventDefault();
 
-      // Normaliza y agrega optimista
-      const normalized = {
-        ...created,
-        active: typeof created.active === 'boolean' ? created.active : !!Number(created.active),
-      };
-      setPropiedades(prev => [normalized, ...prev]);
+  if (!propiedadForm.nombre || !propiedadForm.localizacion || !propiedadForm.tamano) {
+    toast.error('Por favor completa los campos requeridos');
+    return;
+  }
 
-      toast.success('Propiedad agregada exitosamente');
-      setShowAddPropiedad(false);
-      setPropiedadForm({ nombre: '', localizacion: '', tamano: '', comentario: '' });
+  try {
+    // ✅ toma el id del token (payload.sub)
+    const me = AuthService.getCurrentUser();
+    const farmerId = Number(me?.id);
 
-      // Re-sync (por si el backend ajusta algo)
-      await loadPropiedades();
-    } catch (error) {
-      console.error('Error adding propiedad:', error);
-      toast.error('Error al agregar propiedad');
-    }
-  };
+    // Construye el payload. Si hay farmerId numérico, lo mandamos; si no, lo omitimos.
+    const payload: {
+      nombre: string;
+      localizacion: string;
+      tamano: string;
+      comentario?: string;
+      farmerId?: number;   // <-- opcional en el payload
+    } = {
+      nombre: propiedadForm.nombre,
+      localizacion: propiedadForm.localizacion,
+      tamano: propiedadForm.tamano,
+      comentario: propiedadForm.comentario || undefined,
+      ...(Number.isFinite(farmerId) ? { farmerId } : {}),  // <-- solo si existe
+    };
 
+    const created = await PropiedadService.createPropiedad(payload);
+
+    const normalized = {
+      ...created,
+      active: typeof created.active === 'boolean' ? created.active : !!Number(created.active),
+    };
+    setPropiedades(prev => [normalized, ...prev]);
+
+    toast.success('Propiedad agregada exitosamente');
+    setShowAddPropiedad(false);
+    setPropiedadForm({ nombre: '', localizacion: '', tamano: '', comentario: '' });
+
+    await loadPropiedades();
+  } catch (error) {
+    console.error('Error adding propiedad:', error);
+    toast.error('Error al agregar propiedad');
+  }
+};
   // NUEVO — abrir modal de edición
   const handleOpenEditPropiedad = (p: Propiedad) => {
     setShowEditPropiedad(p);
@@ -942,7 +954,7 @@ const handleAddToCart = (product: ProductUI): void => {
   const renderMarketplace = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold text-gray-900">Marketplace Agrícola 🛒</h2>
+        <h2 className="text-3xl font-bold text-gray-900">Mercado agrícola 🛒</h2>
       </div>
 
       <div className="flex flex-col md:flex-row gap-4 mb-6">
@@ -1096,7 +1108,7 @@ const handleAddToCart = (product: ProductUI): void => {
               <h3 className="text-lg font-bold text-gray-900 mb-2">{product.name}</h3>
               <div className="space-y-2 mb-4">
                 <p className="text-sm text-gray-600">Precio: ₡{product.price.toLocaleString()}/{product.unit}</p>
-                <p className="text-sm text-gray-600">Stock: {product.stock} {product.unit}s</p>
+                <p className="text-sm text-gray-600">Reserva: {product.stock} {product.unit}s</p>
               </div>
             </CardContent>
 
@@ -1511,7 +1523,7 @@ const handleAddToCart = (product: ProductUI): void => {
               <div className="bg-gradient-to-r from-green-500 to-blue-500 p-2 rounded-xl"><Leaf className="h-8 w-8 text-white" /></div>
               <div>
                 <h1 className="text-2xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">AgroGlobal</h1>
-                <p className="text-sm text-black-500">Dashboard Agricultor  🎑</p>
+                <p className="text-sm text-black-500">Mercado de agricultor  🎑</p>
               </div>
             </motion.div>
             <div className="flex items-center space-x-4">
@@ -1623,7 +1635,7 @@ const handleAddToCart = (product: ProductUI): void => {
           className="ml-6 mt-2 space-y-1 overflow-hidden"
         >
           {[
-            { id: "marketplace", name: "Marketplace", icon: <ShoppingCart className="h-5 w-5" /> },
+            { id: "marketplace", name: "Mercado", icon: <ShoppingCart className="h-5 w-5" /> },
             { id: "ofertas", name: "Mis Ofertas", icon: <Package className="h-5 w-5" /> },
             { id: "tienda", name: "Tienda", icon: <Store className="h-5 w-5" /> },
             { id: "ordenes", name: "Órdenes", icon: <ClipboardList className="h-5 w-5" /> },
@@ -1725,7 +1737,7 @@ const handleAddToCart = (product: ProductUI): void => {
                       <Input id="unit" value={productForm.unit} onChange={(e) => setProductForm({ ...productForm, unit: e.target.value })} required />
                     </div>
                     <div>
-                      <Label htmlFor="stock">Stock *</Label>
+                      <Label htmlFor="stock">Reserva *</Label>
                       <Input id="stock" type="number" value={productForm.stock} onChange={(e) => setProductForm({ ...productForm, stock: e.target.value })} required />
                     </div>
                   </div>

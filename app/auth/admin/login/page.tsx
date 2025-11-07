@@ -39,19 +39,62 @@ export default function AdminAuth() {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  async function handleSubmit(e: React.FormEvent) {
+async function handleSubmit(e: React.FormEvent) {
   e.preventDefault();
   setIsLoading(true);
+
   try {
-    const res = await AuthService.login(formData.email.trim(), formData.password);
-    router.push('/dashboard/admin');
+    if (isLogin) {
+      // ------- LOGIN -------
+      const res = await AuthService.login(
+        formData.email.trim(),
+        formData.password
+      );
+      // si llega aquí, hay token y user en localStorage
+      router.push('/dashboard/admin');
+      return;
+    }
+
+    // ------- REGISTRO (primer admin si no existe) -------
+    // validaciones básicas
+    if (formData.password.length < 6) {
+      toast.error('La contraseña debe tener al menos 6 caracteres.');
+      return;
+    }
+    if (formData.password !== formData.confirmPassword) {
+      toast.error('Las contraseñas no coinciden.');
+      return;
+    }
+
+    const payload = {
+      name: formData.name.trim(),
+      lastName: formData.lastName.trim(),
+      email: formData.email.trim(),
+      phone: formData.phone.trim(),
+      location: formData.location.trim(),
+      residence: formData.residence.trim(),
+      password: formData.password,
+      // 👇 si no hay admins, el backend/cliente forzará 'admin'
+      role: 'admin' as const,
+    };
+
+    const res = await AuthService.register(payload);
+    // Si el backend activó al PRIMER admin, devuelve token y quedas logueado
+    if (res?.access_token || res?.token) {
+      router.push('/dashboard/admin');
+      return;
+    }
+
+    // En cualquier otro caso, queda PENDING (sin token)
+    toast.success('Usuario registrado. Quedará PENDIENTE hasta que un admin lo active.');
+    setIsLogin(true);    // o al mismo admin auth con isLogin=true
   } catch (err: any) {
     const msg = String(err?.message || '');
     if (msg.includes('Credenciales inválidas') || msg.includes('401')) {
       toast.error('Correo o contraseña incorrectos.');
-      return;
+    } else {
+      toast.error(msg || 'No se pudo contactar el servidor.');
     }
-    toast.error('No se pudo contactar el servidor.');
   } finally {
     setIsLoading(false);
   }

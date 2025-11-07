@@ -373,17 +373,33 @@ if (!response.ok) {
   };
 
   // 🏡 SERVICIOS DE PROPIEDADES
+  // propiedades = {
+  //   create: (propiedadData: {
+  //     nombre: string;
+  //     localizacion: string;
+  //     tamano: string;
+  //     comentario?: string;
+  //     farmerId: number;
+  //   }) => this.request('/propiedades', {
+  //     method: 'POST',
+  //     body: JSON.stringify(propiedadData),
+  //   }),
+
+    // 🏡 SERVICIOS DE PROPIEDADES (api.ts)
+
   propiedades = {
-    create: (propiedadData: {
-      nombre: string;
-      localizacion: string;
-      tamano: string;
-      comentario?: string;
-      farmerId: number;
-    }) => this.request('/propiedades', {
-      method: 'POST',
-      body: JSON.stringify(propiedadData),
-    }),
+  create: (propiedadData: {
+    nombre: string;
+    localizacion: string;
+    tamano: string;
+    comentario?: string;
+    farmerId?: number;    // <-- opcional aquí también
+  }) => this.request('/propiedades', {
+    method: 'POST',
+    body: JSON.stringify(propiedadData),
+  }),
+
+
     
     getAll: (params?: { farmerId?: number; active?: boolean }) => {
       const queryParams = new URLSearchParams();

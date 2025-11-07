@@ -1,9 +1,9 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Crown, Users, Package, ShoppingCart, Store, Camera, Building2, TrendingUp, UserCheck, UserX, Eye, CreditCard as Edit, Trash2, Plus, Search, Filter, MoveHorizontal as MoreHorizontal, CircleCheck as CheckCircle, Circle as XCircle, CircleAlert as AlertCircle, ChartBar as BarChart3, ChartPie as PieChart, DollarSign, Leaf, LogOut, Settings, Bell, RefreshCw, Download, Upload, Mail, Phone, MapPin, Calendar, Clock, Star, Award, Target, Zap, X, Save, Check, Key, Edit3, Square, Edit2, LucideEdit3, Edit3Icon, Activity as ActivityIcon, Sun, Moon, } from 'lucide-react';
+import { Crown, Users, Package, ShoppingCart, Store, Camera, Building2, TrendingUp, UserCheck, UserX, Eye, CreditCard as Edit, Trash2, Plus, Search, Filter, MoveHorizontal as MoreHorizontal, CircleCheck as CheckCircle, Circle as XCircle, CircleAlert as AlertCircle, ChartBar as BarChart3, ChartPie as PieChart, DollarSign, Leaf, LogOut, Settings, Bell, RefreshCw, Download, Upload, Mail, Phone, MapPin, Calendar, Clock, Star, Award, Target, Zap, X, Save, Check, Key, Edit3, Square, Edit2, LucideEdit3, Edit3Icon, Activity as ActivityIcon, Sun, Moon, SquarePen as SquareEdit  } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -21,8 +21,10 @@ import { User, Product, Order, VetShop } from '@/lib/api';
 import { toast } from 'sonner';
 import { createLucideIcon } from "lucide-react";
 import AmbientBackground from '@/components/ui/AmbientBackground';
-
 import { ActivityService, Activity } from '@/services/activity.service'; // si usas la opción A
+
+import React from 'react';
+
 
 interface Statistics {
   users: {
@@ -49,6 +51,7 @@ interface Statistics {
     inactive: number;
   };
 }
+
 
 type Theme = { g1: string; g2: string; g3: string; g4: string };
 
@@ -128,9 +131,42 @@ const DEFAULT_STATS: Statistics = {
   orders: { total: 0, pending: 0, processing: 0, delivered: 0 },
   vetShops: { total: 0, active: 0, inactive: 0 },
 };
+
+
+
+// tickless: forza 1 re-render por segundo sin logs ni duplicados en StrictMode
+// quita cualquier startedRef / flags
+// function useNowMs(step = 1000) {
+//   const [, force] = React.useReducer((n) => n + 1, 0);
+//   const nowRef = React.useRef(Date.now());
+
+//   React.useEffect(() => {
+//     const tick = () => {
+//       nowRef.current = Date.now();
+//       force();
+//     };
+
+//     const pick = () => (document.hidden ? Math.max(step, 10000) : step);
+
+//     let id = window.setInterval(tick, pick());
+//     const onVis = () => {
+//       clearInterval(id);
+//       id = window.setInterval(tick, pick());
+//     };
+//     document.addEventListener('visibilitychange', onVis);
+
+//     return () => {
+//       clearInterval(id);
+//       document.removeEventListener('visibilitychange', onVis);
+//     };
+//   }, [step]);
+
+//   return nowRef.current;
+// }
+
 export default function AdminDashboard() {
 
-
+  
   const [ambient, setAmbient] = useState<{ g1: string; g2: string; g3: string; g4: string; tint?: string } | null>(null);
   const [activeSection, setActiveSection] = useState('dashboard');
   const [users, setUsers] = useState<User[]>([]);
@@ -153,6 +189,8 @@ export default function AdminDashboard() {
   const [backendConnected, setBackendConnected] = useState(false);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [darkSidebar, setDarkSidebar] = useState(false);
+
+
   const [vetShopForm, setVetShopForm] = useState({
     name: '',
     email: '',
@@ -170,6 +208,14 @@ export default function AdminDashboard() {
     location: '',
     residence: '',
   });
+
+  // reloj global para forzar re-render
+// const [now, setNow] = useState(() => Date.now());
+// useEffect(() => {
+//   const id = setInterval(() => setNow(Date.now()), 1000); // 1s
+//   return () => clearInterval(id);
+// }, []);
+
 
   // Filtros / búsqueda sólo para agro vet
   const [vetTab, setVetTab] = useState<'all' | 'active' | 'inactive'>('all');
@@ -304,6 +350,13 @@ export default function AdminDashboard() {
   //const [editableUser, setEditableUser] = useState<User | null>(null);
   const [isEditingUser, setIsEditingUser] = useState(false);
 
+  
+useEffect(() => {
+  if (!backendConnected) return;
+  loadActivities();                         // primera carga
+  const id = setInterval(loadActivities, 60_000); // refresco cada 60s
+  return () => clearInterval(id);
+}, [backendConnected]);
 
 
   const loadAllData = async () => {
@@ -407,21 +460,22 @@ export default function AdminDashboard() {
       toast.error('Error al cargar agro veterinarias');
     }
   };
-
-  const loadActivities = async () => {
-    try {
-      const data = await ActivityService.getRecent(5, 25);
-      setActivities(data);
-    } catch (e) {
-      console.error('Error loading activities', e);
-    }
-  };
+ 
+// ✅ mantener simple
+const loadActivities = async () => {
+  try {
+    const data = await ActivityService.getRecent(5, 25);
+    setActivities(data);
+  } catch (e) {
+    console.error('Error loading activities', e);
+  }
+};
 
   // cuando ya está backendConnected === true, cargamos
   useEffect(() => {
     if (!backendConnected) return;
     loadActivities();
-    const id = setInterval(loadActivities, 30000); // refresco 60s
+    const id = setInterval(loadActivities, 60000); // refresco 60s reales
     return () => clearInterval(id);
   }, [backendConnected]);
 
@@ -572,20 +626,6 @@ export default function AdminDashboard() {
     AuthService.logout();
   };
 
-  function timeAgo(iso: string): string {
-    const diffSec = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
-    const rtf = new Intl.RelativeTimeFormat('es', { numeric: 'auto' });
-    const steps: [number, Intl.RelativeTimeFormatUnit][] = [
-      [60, 'second'], [60, 'minute'], [24, 'hour'], [7, 'day'], [4.34524, 'week'], [12, 'month']
-    ];
-    let val = -diffSec, unit: Intl.RelativeTimeFormatUnit = 'second';
-    for (const [m, u] of steps) {
-      if (Math.abs(val) < m) { unit = u; break; }
-      val = Math.floor(val / m);
-      unit = u;
-    }
-    return rtf.format(val, unit);
-  }
 
   const activityVisual: Record<string, { color: string; Icon: any }> = {
     USER_CREATED: { color: 'bg-blue-500', Icon: UserCheck },
@@ -624,17 +664,19 @@ export default function AdminDashboard() {
 
 
   const sidebarItems = [
-    { id: 'dashboard', name: 'Dashboard', icon: <BarChart3 className="h-5 w-5" /> },
+    { id: 'dashboard', name: 'Panel', icon: <BarChart3 className="h-5 w-5" /> },
     { id: 'users', name: 'Usuarios', icon: <Users className="h-5 w-5" /> },
     { id: 'products', name: 'Productos', icon: <Package className="h-5 w-5" /> },
     //{ id: 'orders', name: 'Órdenes', icon: <ShoppingCart className="h-5 w-5" /> },
     { id: 'vetshops', name: 'Agro Veterinarias', icon: <Store className="h-5 w-5" /> }
   ];
 
+  
+
   const renderDashboard = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold text-gray-900">Dashboard Administrativo 👑</h2>
+        <h2 className="text-3xl font-bold text-gray-900">Panel administrativo 👑</h2>
       </div>
 
       <div className="relative z-10"> {/* z-10 para estar sobre el fondo ambiental */}
@@ -671,42 +713,48 @@ export default function AdminDashboard() {
             onHoverIn={() => setAmbient(THEMES.vets)}
             onHoverOut={() => setAmbient(null)}
           />
+
           <div className="col-span-full">
             <Card className="bg-white border-0 shadow-lg">
               <CardContent className="p-6">
-                <h3 className="text-xl font-bold text-gray-900 mb-4">Actividad Reciente... 🕒</h3>
+    <h3 className="text-xl font-bold text-gray-900 mb-4">
+  Actividad Reciente... 🕒
+</h3>
 
-                {activities.length === 0 ? (
-                  <div className="text-center py-10 text-gray-500">
-                    No hay actividad en los últimos 5 días.
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {activities.map((a) => {
-                      const v = activityVisual[a.type] || { color: 'bg-gray-400', Icon: ActivityIcon };
-                      const Icon = v.Icon;
-                      return (
-                        <div
-                          key={a.id}
-                          className="w-full flex items-center justify-between gap-4 p-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition"
-                        >
-                          <div className="flex items-center gap-4">
-                            <div className={`${v.color} p-2 rounded-full`}>
-                              <Icon className="h-5 w-5 text-white" />
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium text-gray-900">{a.title}</p>
-                              <p className="text-xs text-gray-500">{a.description}</p>
-                            </div>
-                          </div>
-                          <span className="text-xs text-gray-400 whitespace-nowrap">
-                            {timeAgo(a.createdAt)}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+{activities.length === 0 ? (
+  <div className="text-center py-10 text-gray-500">
+    No hay actividad en los últimos 5 días.
+  </div>
+) : (
+  <div className="space-y-4">
+    {activities.map((a) => {
+      // Usa un key estable. Idealmente el id del activity
+      const key = (a as any).id ?? (a as any)._id ?? `${a.type}:${a.title}:${a.createdAt}`;
+      const visual = activityVisual[a.type] || { color: 'bg-gray-400', Icon: Building2 };
+      const Icon = visual.Icon;
+
+      return (
+        <div
+          key={key}
+          className="w-full flex items-center justify-between gap-4 p-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition"
+        >
+          <div className="flex items-center gap-4">
+            <div className={`${visual.color} p-2 rounded-full`}>
+              <Icon className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-gray-900">{a.title}</p>
+              <p className="text-xs text-gray-500">{a.description}</p>
+            </div>
+          </div>
+        </div>
+      );
+    })}
+  </div>
+)}
+
+
+
               </CardContent>
             </Card>
           </div>
@@ -759,6 +807,12 @@ export default function AdminDashboard() {
           >
             Inactivos
           </Button>
+          <Button
+            variant={statusFilter === 'pending' ? 'default' : 'outline'}
+            onClick={() => setStatusFilter('pending')}
+            className={statusFilter === 'pending' ? 'bg-yellow-500 hover:bg-yellow-600' : ''}>
+            Pendientes
+          </Button>
         </div>
       </div>
 
@@ -799,11 +853,20 @@ export default function AdminDashboard() {
                       {user.phone}
                     </td>
 
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <Badge className={`${user.status === 'active' ? 'bg-green-500' : 'bg-red-500'} text-white`}>
-                        {user.status === 'active' ? 'Activo' : 'Inactivo'}
-                      </Badge>
-                    </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                    <Badge
+                        className={
+                        user.status === 'active'
+                        ? 'bg-green-500 text-white'
+                        : user.status === 'pending'
+                        ? 'bg-yellow-500 text-white'
+                        : 'bg-red-500 text-white'
+                      }
+                      >
+                     {user.status === 'active' ? 'Activo' : user.status === 'pending' ? 'Pendiente' : 'Inactivo'}
+                    </Badge>
+
+                  </td>
 
                     <td className="px-6 py-4 whitespace-nowrap">
                       <Badge className={`${user.role === 'admin' ? 'bg-purple-500' : user.role === 'farmer' ? 'bg-green-500' : 'bg-blue-500'} text-white`}>
@@ -1071,7 +1134,6 @@ export default function AdminDashboard() {
       </Card>
     </div>
   );
-
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-indigo-50 to-purple-100">
