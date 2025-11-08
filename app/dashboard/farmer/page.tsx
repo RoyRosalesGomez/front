@@ -26,6 +26,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { alert } from '@/lib/alert';
 import { ProductService } from '@/services/product.service';
 import { BitacoraService } from '@/services/bitacora.service';
 import { CultivoService } from '@/services/cultivo.service';
@@ -492,12 +493,12 @@ const handleAddPropiedad = async (e: React.FormEvent) => {
         comentario: propiedadEditForm.comentario || undefined,
       });
 
-      toast.success('Propiedad actualizada');
+  alert.success('Propiedad actualizada');
       setShowEditPropiedad(null);
       await loadPropiedades();
     } catch (e) {
       console.error(e);
-      toast.error('No se pudo actualizar la propiedad');
+  alert.error('Error', 'No se pudo actualizar la propiedad');
     }
   };
 
@@ -574,13 +575,13 @@ const handleAddPropiedad = async (e: React.FormEvent) => {
         farmerId: currentUser?.id ?? 1,
       });
 
-      toast.success('Producto agregado exitosamente. Pendiente de aprobación por el administrador.');
+  alert.success('Producto agregado', 'Pendiente de aprobación por el administrador.');
       setShowAddProduct(false);
       setProductForm({ name: '', description: '', price: '', unit: '', stock: '', image: '', category: 'otros' });
       await loadMyProducts();
     } catch (error) {
       console.error('Error adding product:', error);
-      toast.error('Error al agregar producto');
+  alert.error('Error', 'No se pudo agregar el producto');
     }
   };
 
@@ -657,11 +658,11 @@ const handleAddPropiedad = async (e: React.FormEvent) => {
       if (editingProductId == null) {
         // crear
         await ProductService.createProduct(payload);
-        toast.success('Producto creado. Queda pendiente de aprobación.');
+  alert.success('Producto creado', 'Queda pendiente de aprobación.');
       } else {
         // actualizar
         await ProductService.updateProduct(editingProductId, payload);
-        toast.success('Producto actualizado.');
+  alert.success('Producto actualizado');
       }
 
       setShowAddProduct(false);
@@ -669,13 +670,13 @@ const handleAddPropiedad = async (e: React.FormEvent) => {
       await loadMyProducts();
     } catch (error) {
       console.error(error);
-      toast.error('No se pudo guardar el producto');
+  alert.error('Error', 'No se pudo guardar el producto');
     }
   };
 
   // Eliminar
   const handleDeleteProduct = async (id: number, name?: string) => {
-    const ok = window.confirm(`¿Eliminar "${name ?? 'este producto'}"?`);
+    const ok = await alert.confirm('¿Eliminar producto?', name ? `Se eliminará "${name}"` : 'Esta acción no se puede deshacer.');
     if (!ok) return;
 
     // 1) Estado previo para revertir si falla
@@ -685,11 +686,11 @@ const handleAddPropiedad = async (e: React.FormEvent) => {
 
     try {
       await ProductService.deleteProduct(id);
-      toast.success('Producto eliminado');
+  alert.success('Producto eliminado');
       //await loadMyProducts();
     } catch (error) {
       console.error(error);
-      toast.error('No se pudo eliminar el producto');
+  alert.error('Error', 'No se pudo eliminar el producto');
       // Revertimos si el backend falló
       setMyProducts(prev);
     }
@@ -720,7 +721,7 @@ const handleAddPropiedad = async (e: React.FormEvent) => {
           observaciones: bitacoraForm.observaciones,
           cantidad: bitacoraForm.cantidad,
         });
-        toast.success('Entrada de bitácora actualizada');
+  alert.success('Bitácora actualizada');
       } else {
         await BitacoraService.createEntry({
           tipoActividad: bitacoraForm.tipoActividad,
@@ -733,7 +734,7 @@ const handleAddPropiedad = async (e: React.FormEvent) => {
           cantidad: bitacoraForm.cantidad,
           //farmerId: currentUser?.id ?? 1
         });
-        toast.success('Entrada de bitácora agregada exitosamente');
+  alert.success('Entrada agregada', 'Bitácora actualizada');
       }
 
       setShowAddBitacora(false);
@@ -745,7 +746,7 @@ const handleAddPropiedad = async (e: React.FormEvent) => {
       await loadBitacora();
     } catch (error) {
       console.error('Error guardando entrada de bitácora:', error);
-      toast.error('Ocurrió un error guardando la entrada');
+  alert.error('Error', 'No se pudo guardar la entrada');
     }
   };
 
@@ -768,7 +769,7 @@ const handleAddPropiedad = async (e: React.FormEvent) => {
 
   // Elimina por id (una sola función)
   const handleDeleteBitacora = async (id: number) => {
-    const ok = window.confirm('¿Eliminar esta entrada de la bitácora?');
+    const ok = await alert.confirm('¿Eliminar entrada?', 'Esta acción no se puede deshacer.');
     if (!ok) return;
 
     const prev = bitacoraEntries;
@@ -777,10 +778,10 @@ const handleAddPropiedad = async (e: React.FormEvent) => {
     try {
       await BitacoraService.deleteEntry(id);
       setBitacoraEntries(prev => prev.filter(e => e.id !== id));
-      toast.success('Entrada eliminada');
+  alert.success('Entrada eliminada');
     } catch (error) {
       console.error(error);
-      toast.error('No se pudo eliminar la entrada');
+  alert.error('Error', 'No se pudo eliminar la entrada');
       setBitacoraEntries(prev); // revertir
     }
   };
@@ -801,7 +802,7 @@ const handleAddPropiedad = async (e: React.FormEvent) => {
         image: cultivoForm.image || undefined,
       });
 
-      toast.success('Cultivo agregado exitosamente');
+  alert.success('Cultivo agregado');
       setShowAddCultivo(false);
       setCultivoForm({ name: '', variedad: '', comentario: '', image: '' });
 
@@ -814,7 +815,7 @@ const handleAddPropiedad = async (e: React.FormEvent) => {
       }
     } catch (error) {
       console.error('Error adding cultivo:', error);
-      toast.error('Error al agregar cultivo');
+  alert.error('Error', 'No se pudo agregar cultivo');
     }
   };
 
@@ -855,10 +856,10 @@ const handleAddPropiedad = async (e: React.FormEvent) => {
 
       if (editingCultivoId == null) {
         await CultivoService.createCultivo(payload);
-        toast.success('Cultivo creado');
+  alert.success('Cultivo creado');
       } else {
         await CultivoService.updateCultivo(editingCultivoId, payload);
-        toast.success('Cultivo actualizado');
+  alert.success('Cultivo actualizado');
       }
 
       setShowAddCultivo(false);
@@ -866,21 +867,21 @@ const handleAddPropiedad = async (e: React.FormEvent) => {
       await loadCultivos();
     } catch (err) {
       console.error('Error guardando cultivo:', err);
-      toast.error('No se pudo guardar el cultivo');
+  alert.error('Error', 'No se pudo guardar el cultivo');
     }
   };
 
   // Eliminar
   const handleDeleteCultivo = async (id: number, name?: string) => {
-    const ok = window.confirm(`¿Eliminar "${name ?? 'este cultivo'}"?`);
+    const ok = await alert.confirm('¿Eliminar cultivo?', name ? `Se eliminará "${name}"` : 'Esta acción no se puede deshacer.');
     if (!ok) return;
     try {
       await CultivoService.deleteCultivo(id);
-      toast.success('Cultivo eliminado');
+  alert.success('Cultivo eliminado');
       await loadCultivos();
     } catch (err) {
       console.error(err);
-      toast.error('No se pudo eliminar el cultivo');
+  alert.error('Error', 'No se pudo eliminar el cultivo');
     }
   };
 
