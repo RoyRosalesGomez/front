@@ -52,13 +52,6 @@ export default function FarmerAuth() {
 
     try {
 
-  if (isLogin) {
-  const email = formData.email.trim().toLowerCase();   // ✅ normaliza
-  const password = formData.password;                  // no toques espacios intermedios
-
-  const response = await AuthService.login(email, password);
-}
-
       if (isLogin) {
         try {
           // Intentar login real con el backend

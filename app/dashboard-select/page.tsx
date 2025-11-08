@@ -46,12 +46,12 @@ interface Translations {
   };
 }
 
-const languages: Language[] = [
-  { code: 'es', name: 'Español', flag: '🇪🇸' },
-  { code: 'en', name: 'English', flag: '🇺🇸' },
-  { code: 'fr', name: 'Français', flag: '🇫🇷' },
-  { code: 'pt', name: 'Português', flag: '🇧🇷' }
-];
+// const languages: Language[] = [
+//   { code: 'es', name: 'Español', flag: '🇪🇸' },
+//   { code: 'en', name: 'English', flag: '🇺🇸' },
+//   { code: 'fr', name: 'Français', flag: '🇫🇷' },
+//   { code: 'pt', name: 'Português', flag: '🇧🇷' }
+// ];
 
 const translations: Translations = {
   es: {
@@ -61,11 +61,11 @@ const translations: Translations = {
     client: 'Cliente',
     farmer: 'Agricultor',
     administrator: 'Administrador',
-    clientDesc: 'Accede al marketplace para comprar productos agrícolas frescos y de calidad',
+    clientDesc: 'Accede al mercado para comprar productos agrícolas frescos y de calidad',
     farmerDesc: 'Gestiona tus cultivos, productos y conecta con compradores directamente',
     adminDesc: 'Administra el sistema, usuarios y supervisa todas las operaciones',
     aboutSystem: 'Acerca del Sistema',
-    systemDescription: 'AgroGlobal es una plataforma integral que conecta agricultores, clientes y administradores en un ecosistema digital innovador. Nuestro dashboard permite gestionar cultivos, realizar compras, administrar inventarios y mantener un control completo de las operaciones agrícolas. Con herramientas avanzadas de seguimiento, bitácoras digitales y un marketplace integrado, facilitamos el comercio justo y transparente en el sector agrícola.',
+    systemDescription: 'AgroGlobal es una plataforma integral que conecta agricultores, clientes y administradores en un ecosistema digital innovador. Nuestro dashboard permite gestionar cultivos, realizar compras, administrar inventarios y mantener un control completo de las operaciones agrícolas. Con herramientas avanzadas de seguimiento, bitácoras digitales y un mercado integrado, facilitamos el comercio justo y transparente en el sector agrícola.',
     backToHome: 'Volver al Inicio',
     continue: 'Continuar',
     clientWelcome: 'Bienvenido al Sector Cliente',
@@ -81,11 +81,11 @@ const translations: Translations = {
     client: 'Client',
     farmer: 'Farmer',
     administrator: 'Administrator',
-    clientDesc: 'Access the marketplace to buy fresh and quality agricultural products',
+    clientDesc: 'Access the mercado to buy fresh and quality agricultural products',
     farmerDesc: 'Manage your crops, products and connect with buyers directly',
     adminDesc: 'Administer the system, users and supervise all operations',
     aboutSystem: 'About the System',
-    systemDescription: 'AgroGlobal is a comprehensive platform that connects farmers, clients and administrators in an innovative digital ecosystem. Our dashboard allows you to manage crops, make purchases, manage inventories and maintain complete control of agricultural operations. With advanced tracking tools, digital logs and an integrated marketplace, we facilitate fair and transparent trade in the agricultural sector.',
+    systemDescription: 'AgroGlobal is a comprehensive platform that connects farmers, clients and administrators in an innovative digital ecosystem. Our dashboard allows you to manage crops, make purchases, manage inventories and maintain complete control of agricultural operations. With advanced tracking tools, digital logs and an integrated mercado, we facilitate fair and transparent trade in the agricultural sector.',
     backToHome: 'Back to Home',
     continue: 'Continue',
     clientWelcome: 'Welcome to Client Sector',
@@ -121,7 +121,7 @@ const translations: Translations = {
     client: 'Cliente',
     farmer: 'Agricultor',
     administrator: 'Administrador',
-    clientDesc: 'Acesse o marketplace para comprar produtos agrícolas frescos e de qualidade',
+    clientDesc: 'Acesse o mercado para comprar produtos agrícolas frescos e de qualidade',
     farmerDesc: 'Gerencie suas culturas, produtos e conecte-se diretamente com compradores',
     adminDesc: 'Administre o sistema, usuários e supervisione todas as operações',
     aboutSystem: 'Sobre o Sistema',
@@ -274,7 +274,7 @@ export default function DashboardSelect() {
           transition={{ duration: 0.6, delay: 0.2 }}
         >
           <div className="relative">
-            <Button
+            {/* <Button
               variant="outline"
               className="bg-white/80 backdrop-blur-sm border-gray-200 hover:bg-white hover:shadow-lg transition-all duration-300 px-6 py-3 text-lg"
               onClick={() => setIsLanguageOpen(!isLanguageOpen)}
@@ -284,7 +284,7 @@ export default function DashboardSelect() {
               {t.selectLanguage}
               <ChevronDown className={`ml-3 h-4 w-4 transition-transform duration-300 ${isLanguageOpen ? 'rotate-180' : ''}`} />
             </Button>
-            
+             */}
             <AnimatePresence>
               {isLanguageOpen && (
                 <motion.div
@@ -294,7 +294,7 @@ export default function DashboardSelect() {
                   exit={{ opacity: 0, y: -10, scale: 0.95 }}
                   transition={{ duration: 0.2 }}
                 >
-                  {languages.map((language) => (
+                  {/* {languages.map((language) => (
                     <button
                       key={language.code}
                       className="w-full px-6 py-3 text-left hover:bg-green-50 transition-colors duration-200 flex items-center space-x-3"
@@ -306,7 +306,7 @@ export default function DashboardSelect() {
                       <span className="text-xl">{language.flag}</span>
                       <span className="font-medium text-gray-700">{language.name}</span>
                     </button>
-                  ))}
+                  ))} */}
                 </motion.div>
               )}
             </AnimatePresence>
