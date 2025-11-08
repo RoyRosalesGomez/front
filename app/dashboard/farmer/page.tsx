@@ -1,50 +1,82 @@
+"use client";
 
-'use client';
-
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
-  ShoppingCart, Store, Package, BookOpen, Sprout, Home,
-  LogOut, Bell, Plus, Search, Star, MapPin, Phone, Mail,
-  Trash2, Save, X, Leaf, Edit, ToggleLeft, ToggleRight, LeafyGreen,
+  ShoppingCart,
+  Store,
+  Package,
+  BookOpen,
+  Sprout,
+  Home,
+  LogOut,
+  Bell,
+  Plus,
+  Search,
+  Star,
+  MapPin,
+  Phone,
+  Mail,
+  Trash2,
+  Save,
+  X,
+  Leaf,
+  Edit,
+  ToggleLeft,
+  ToggleRight,
+  LeafyGreen,
   CheckCircle,
   Clock,
   Eye,
-  Minus,ArrowLeft,Briefcase, ChevronDown, ChevronUp,
+  Minus,
+  ArrowLeft,
+  Briefcase,
+  ChevronDown,
+  ChevronUp,
   ChevronRight,
   Bot,
-  ClipboardList
-} from 'lucide-react';
+  ClipboardList,
+} from "lucide-react";
 
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardFooter,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { toast } from "sonner";
+import { alert } from "@/lib/alert";
+import { ProductService } from "@/services/product.service";
+import { BitacoraService } from "@/services/bitacora.service";
+import { CultivoService } from "@/services/cultivo.service";
+import { PropiedadService } from "@/services/propiedad.service";
+import { AuthService } from "@/services/auth.service";
+import { ProductCategory, ProductStatus } from "@/app/types/product";
+import { OrderService } from "@/services/order.service";
+import type { Order as OrderApi } from "@/lib/api";
+import { VetShopService } from "@/services/vetshop.service";
 
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { toast } from 'sonner';
-import { alert } from '@/lib/alert';
-import { ProductService } from '@/services/product.service';
-import { BitacoraService } from '@/services/bitacora.service';
-import { CultivoService } from '@/services/cultivo.service';
-import { PropiedadService } from '@/services/propiedad.service';
-import { AuthService } from '@/services/auth.service';
-import { ProductCategory, ProductStatus } from '@/app/types/product';
-import { OrderService } from '@/services/order.service';
-import type { Order as OrderApi } from '@/lib/api';
-import { VetShopService } from '@/services/vetshop.service';
-
-import { AIAssistant } from '@/components/ui/ai-assistant';
-
+import { AIAssistant } from "@/components/ui/ai-assistant";
 
 // Tipo “UI” para lo que pintamos
 type OrderUI = {
   id: number;
   quantity: number;
-  status: 'pending' | 'processing' | 'delivered' | 'cancelled';
+  status: "pending" | "processing" | "delivered" | "cancelled";
   createdAt: string;
 
   // de product
@@ -97,7 +129,7 @@ interface Order {
   subtotal: number;
   iva: number;
   total: number;
-  status: 'pending' | 'processing' | 'delivered' | 'cancelled';
+  status: "pending" | "processing" | "delivered" | "cancelled";
   notes?: string;
   customerName: string;
   customerEmail: string;
@@ -148,25 +180,27 @@ interface Propiedad {
 // Helper para formatear colones como "₡1000" (sin decimales)
 // Cambia useGrouping a true si quieres "₡1.000"
 const formatCRC = (v: number | string) =>
-  `₡${Number(v).toLocaleString('es-CR', {
+  `₡${Number(v).toLocaleString("es-CR", {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
     useGrouping: false,
   })}`;
 
 export default function FarmerDashboard() {
-  const [activeSection, setActiveSection] = useState('marketplace');
+  const [activeSection, setActiveSection] = useState("marketplace");
   const [showProfile, setShowProfile] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState<'all' | 'frutas' | 'verduras' | 'granos'>('all');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<
+    "all" | "frutas" | "verduras" | "granos"
+  >("all");
   const currentUser = AuthService.getCurrentUser(); // { id, email, role, ... }
-  
+
   const [darkSidebar, setDarkSidebar] = useState(false);
 
   // Estado para controlar si el menú "Gestión Comercial" está desplegado o no
-const [isCommercialOpen, setIsCommercialOpen] = useState(true);
-  
+  const [isCommercialOpen, setIsCommercialOpen] = useState(true);
+
   // Modales
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [showAddBitacora, setShowAddBitacora] = useState(false);
@@ -175,7 +209,9 @@ const [isCommercialOpen, setIsCommercialOpen] = useState(true);
 
   // === Marketplace Agricultor ===
   const [products, setProducts] = useState<ProductUI[]>([]);
-  const [selectedProduct, setSelectedProduct] = useState<ProductUI | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<ProductUI | null>(
+    null
+  );
   const [productQuantity, setProductQuantity] = useState(1);
   const [adding, setAdding] = useState(false);
   const [loadingMarketplace, setLoadingMarketplace] = useState(false);
@@ -183,7 +219,6 @@ const [isCommercialOpen, setIsCommercialOpen] = useState(true);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [showCart, setShowCart] = useState(false);
   const [finalizing, setFinalizing] = useState(false);
-
 
   const [vetShops, setVetShops] = useState<VetShop[]>([]);
   // Modal “Ver Más”
@@ -194,9 +229,14 @@ const [isCommercialOpen, setIsCommercialOpen] = useState(true);
   const [propiedades, setPropiedades] = useState<Propiedad[]>([]);
 
   // NUEVO — para editar propiedad
-  const [showEditPropiedad, setShowEditPropiedad] = useState<Propiedad | null>(null);
+  const [showEditPropiedad, setShowEditPropiedad] = useState<Propiedad | null>(
+    null
+  );
   const [propiedadEditForm, setPropiedadEditForm] = useState({
-    nombre: '', localizacion: '', tamano: '', comentario: ''
+    nombre: "",
+    localizacion: "",
+    tamano: "",
+    comentario: "",
   });
 
   // estado
@@ -213,24 +253,36 @@ const [isCommercialOpen, setIsCommercialOpen] = useState(true);
     image: string;
     category: ProductCategory;
   }>({
-    name: '',
-    description: '',
-    price: '',
-    unit: '',
-    stock: '',
-    image: '',
-    category: 'otros',
+    name: "",
+    description: "",
+    price: "",
+    unit: "",
+    stock: "",
+    image: "",
+    category: "otros",
   });
 
   const [bitacoraForm, setBitacoraForm] = useState({
-    tipoActividad: '', tipoCultivo: '', fechaInicio: '', fechaFin: '',
-    detalle: '', lote: '', observaciones: '', cantidad: ''
+    tipoActividad: "",
+    tipoCultivo: "",
+    fechaInicio: "",
+    fechaFin: "",
+    detalle: "",
+    lote: "",
+    observaciones: "",
+    cantidad: "",
   });
   const [cultivoForm, setCultivoForm] = useState({
-    name: '', variedad: '', comentario: '', image: ''
+    name: "",
+    variedad: "",
+    comentario: "",
+    image: "",
   });
   const [propiedadForm, setPropiedadForm] = useState({
-    nombre: '', localizacion: '', tamano: '', comentario: ''
+    nombre: "",
+    localizacion: "",
+    tamano: "",
+    comentario: "",
   });
 
   // Estado de edición para bitácora (usa el MISMO modal de crear)
@@ -242,29 +294,31 @@ const [isCommercialOpen, setIsCommercialOpen] = useState(true);
   // === Cultivos ===
   const [editingCultivoId, setEditingCultivoId] = useState<number | null>(null);
 
-
   const farmerNameOf = (p?: { farmer?: any } | null): string => {
-    if (!p || p.farmer == null) return '';
-    return typeof p.farmer === 'string' ? p.farmer : (p.farmer?.name ?? '');
+    if (!p || p.farmer == null) return "";
+    return typeof p.farmer === "string" ? p.farmer : (p.farmer?.name ?? "");
   };
 
-  const farmerLocationOf = (p?: { farmer?: any; location?: string } | null): string => {
-    if (!p) return '';
-    if (typeof p.farmer === 'string') return p.location ?? '';
-    return p.farmer?.location ?? p.location ?? '';
+  const farmerLocationOf = (
+    p?: { farmer?: any; location?: string } | null
+  ): string => {
+    if (!p) return "";
+    if (typeof p.farmer === "string") return p.location ?? "";
+    return p.farmer?.location ?? p.location ?? "";
   };
-
 
   // ====== Carga de Bitácora ======
   const loadBitacora = async () => {
     if (!currentUser?.id) return;
     setLoading(true);
     try {
-      const data = await BitacoraService.getAllEntries({ farmerId: currentUser.id });
-      setBitacoraEntries(Array.isArray(data) ? data : data?.items ?? []);
+      const data = await BitacoraService.getAllEntries({
+        farmerId: currentUser.id,
+      });
+      setBitacoraEntries(Array.isArray(data) ? data : (data?.items ?? []));
     } catch (e) {
       console.error(e);
-      toast.error('No se pudieron cargar las entradas de la bitácora');
+      toast.error("No se pudieron cargar las entradas de la bitácora");
     } finally {
       setLoading(false);
     }
@@ -275,21 +329,27 @@ const [isCommercialOpen, setIsCommercialOpen] = useState(true);
     if (!currentUser?.id) return;
     setLoadingOrders(true);
     try {
-      const data: OrderApi[] = await OrderService.getAllOrders({ farmerId: currentUser.id });
+      const data: OrderApi[] = await OrderService.getAllOrders({
+        farmerId: currentUser.id,
+      });
 
       // ⬇️ no muestres entregadas ni canceladas
       const mapped: OrderUI[] = (data ?? [])
-        .filter(o => o.status !== 'delivered' && o.status !== 'cancelled')
+        .filter((o) => o.status !== "delivered" && o.status !== "cancelled")
         .map((o) => ({
           id: o.id,
           quantity: o.quantity,
           status: o.status,
           createdAt: o.createdAt,
-          productName: o.product?.name ?? 'Producto',
-          productImage: o.product?.image || '',
-          customerName: [o.customer?.name, o.customer?.lastName].filter(Boolean).join(' ') ||
-            o.customer?.email || 'Cliente',
-          customerPhone: o.customer?.phone || '',
+          productName: o.product?.name ?? "Producto",
+          productImage: o.product?.image || "",
+          customerName:
+            [o.customer?.name, o.customer?.lastName]
+              .filter(Boolean)
+              .join(" ") ||
+            o.customer?.email ||
+            "Cliente",
+          customerPhone: o.customer?.phone || "",
         }));
 
       setOrders(mapped);
@@ -301,7 +361,7 @@ const [isCommercialOpen, setIsCommercialOpen] = useState(true);
   };
 
   useEffect(() => {
-    if (activeSection === 'marketplace') {
+    if (activeSection === "marketplace") {
       loadMarketplaceProducts();
     }
   }, [activeSection, categoryFilter, searchTerm]);
@@ -310,13 +370,14 @@ const [isCommercialOpen, setIsCommercialOpen] = useState(true);
     setLoadingMarketplace(true);
     try {
       const data = await ProductService.getApprovedProducts({
-        category: categoryFilter === 'all' ? undefined : (categoryFilter as any),
+        category:
+          categoryFilter === "all" ? undefined : (categoryFilter as any),
         search: searchTerm || undefined,
       });
       setProducts(data as ProductUI[]);
     } catch (e) {
       console.error(e);
-      toast.error('Error al cargar productos del marketplace');
+      toast.error("Error al cargar productos del marketplace");
     } finally {
       setLoadingMarketplace(false);
     }
@@ -329,10 +390,10 @@ const [isCommercialOpen, setIsCommercialOpen] = useState(true);
       // si tu API ya filtra por el usuario autenticado, no mandes nada;
       // si no, puedes pasar { farmerId: currentUser?.id }
       const data = await CultivoService.getAllCultivos();
-      setCultivos(Array.isArray(data) ? data : data?.items ?? []);
+      setCultivos(Array.isArray(data) ? data : (data?.items ?? []));
     } catch (e) {
       console.error(e);
-      toast.error('No se pudieron cargar los cultivos');
+      toast.error("No se pudieron cargar los cultivos");
     } finally {
       setLoading(false);
     }
@@ -340,17 +401,22 @@ const [isCommercialOpen, setIsCommercialOpen] = useState(true);
 
   const handleToggleCultivo = async (id: number, currentActive?: boolean) => {
     // optimista: refleja el cambio al instante
-    setCultivos(prev => prev.map(c => c.id === id ? { ...c, active: !c.active } : c));
+    setCultivos((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, active: !c.active } : c))
+    );
     try {
       await CultivoService.toggleActiveCultivo(id);
     } catch (err) {
       // revierte si falla
-      setCultivos(prev => prev.map(c => c.id === id ? { ...c, active: currentActive ?? c.active } : c));
+      setCultivos((prev) =>
+        prev.map((c) =>
+          c.id === id ? { ...c, active: currentActive ?? c.active } : c
+        )
+      );
       console.error(err);
-      toast.error('No se pudo cambiar el estado');
+      toast.error("No se pudo cambiar el estado");
     }
   };
-
 
   // ===== Propiedades =====
   // NUEVO
@@ -358,16 +424,20 @@ const [isCommercialOpen, setIsCommercialOpen] = useState(true);
     if (!currentUser?.id) return;
     setLoading(true);
     try {
-      const data = await PropiedadService.getAllPropiedades({ farmerId: currentUser.id });
+      const data = await PropiedadService.getAllPropiedades({
+        farmerId: currentUser.id,
+      });
       // normaliza active => boolean
-      const normalized = (Array.isArray(data) ? data : data?.items ?? []).map((p: any) => ({
-        ...p,
-        active: typeof p.active === 'boolean' ? p.active : !!Number(p.active),
-      }));
+      const normalized = (Array.isArray(data) ? data : (data?.items ?? [])).map(
+        (p: any) => ({
+          ...p,
+          active: typeof p.active === "boolean" ? p.active : !!Number(p.active),
+        })
+      );
       setPropiedades(normalized);
     } catch (e) {
       console.error(e);
-      toast.error('No se pudieron cargar las propiedades');
+      toast.error("No se pudieron cargar las propiedades");
     } finally {
       setLoading(false);
     }
@@ -380,18 +450,17 @@ const [isCommercialOpen, setIsCommercialOpen] = useState(true);
       // normaliza active por si viene 0/1
       const normalized = (data || []).map((v: any) => ({
         ...v,
-        active: typeof v.active === 'boolean' ? v.active : !!Number(v.active),
+        active: typeof v.active === "boolean" ? v.active : !!Number(v.active),
       }));
       setVetShops(normalized);
     } catch (e) {
       console.error(e);
-      toast.error('No se pudieron cargar las agro veterinarias');
+      toast.error("No se pudieron cargar las agro veterinarias");
     }
   };
 
-
   useEffect(() => {
-    if (activeSection === 'marketplace') {
+    if (activeSection === "marketplace") {
       loadApprovedProducts();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -401,82 +470,95 @@ const [isCommercialOpen, setIsCommercialOpen] = useState(true);
     setLoading(true);
     try {
       const data = await ProductService.getApprovedProducts({
-        category: categoryFilter === 'all' ? undefined : (categoryFilter as any),
+        category:
+          categoryFilter === "all" ? undefined : (categoryFilter as any),
         search: searchTerm || undefined,
       });
 
-      const lista = (data as ProductUI[]).filter(p => p.farmerId !== currentUser?.id);
+      const lista = (data as ProductUI[]).filter(
+        (p) => p.farmerId !== currentUser?.id
+      );
       setProducts(lista); // o setProducts(data as ProductUI[]);
     } catch {
-      toast.error('Error al cargar productos del marketplace');
+      toast.error("Error al cargar productos del marketplace");
     } finally {
       setLoading(false);
     }
   };
 
-
   // Carga cuando entres a la pestaña y al montar si quieres
   useEffect(() => {
-    if (activeSection === 'propiedades') loadPropiedades();
+    if (activeSection === "propiedades") loadPropiedades();
   }, [activeSection, currentUser?.id]);
-
 
   // Después de crear, recarga (o inserta optimista)
   // UPDATE — crear propiedad: añade al estado o recarga
-const handleAddPropiedad = async (e: React.FormEvent) => {
-  e.preventDefault();
+  const handleAddPropiedad = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-  if (!propiedadForm.nombre || !propiedadForm.localizacion || !propiedadForm.tamano) {
-    toast.error('Por favor completa los campos requeridos');
-    return;
-  }
+    if (
+      !propiedadForm.nombre ||
+      !propiedadForm.localizacion ||
+      !propiedadForm.tamano
+    ) {
+      toast.error("Por favor completa los campos requeridos");
+      return;
+    }
 
-  try {
-    // ✅ toma el id del token (payload.sub)
-    const me = AuthService.getCurrentUser();
-    const farmerId = Number(me?.id);
+    try {
+      // ✅ toma el id del token (payload.sub)
+      const me = AuthService.getCurrentUser();
+      const farmerId = Number(me?.id);
 
-    // Construye el payload. Si hay farmerId numérico, lo mandamos; si no, lo omitimos.
-    const payload: {
-      nombre: string;
-      localizacion: string;
-      tamano: string;
-      comentario?: string;
-      farmerId?: number;   // <-- opcional en el payload
-    } = {
-      nombre: propiedadForm.nombre,
-      localizacion: propiedadForm.localizacion,
-      tamano: propiedadForm.tamano,
-      comentario: propiedadForm.comentario || undefined,
-      ...(Number.isFinite(farmerId) ? { farmerId } : {}),  // <-- solo si existe
-    };
+      // Construye el payload. Si hay farmerId numérico, lo mandamos; si no, lo omitimos.
+      const payload: {
+        nombre: string;
+        localizacion: string;
+        tamano: string;
+        comentario?: string;
+        farmerId?: number; // <-- opcional en el payload
+      } = {
+        nombre: propiedadForm.nombre,
+        localizacion: propiedadForm.localizacion,
+        tamano: propiedadForm.tamano,
+        comentario: propiedadForm.comentario || undefined,
+        ...(Number.isFinite(farmerId) ? { farmerId } : {}), // <-- solo si existe
+      };
 
-    const created = await PropiedadService.createPropiedad(payload);
+      const created = await PropiedadService.createPropiedad(payload);
 
-    const normalized = {
-      ...created,
-      active: typeof created.active === 'boolean' ? created.active : !!Number(created.active),
-    };
-    setPropiedades(prev => [normalized, ...prev]);
+      const normalized = {
+        ...created,
+        active:
+          typeof created.active === "boolean"
+            ? created.active
+            : !!Number(created.active),
+      };
+      setPropiedades((prev) => [normalized, ...prev]);
 
-    toast.success('Propiedad agregada exitosamente');
-    setShowAddPropiedad(false);
-    setPropiedadForm({ nombre: '', localizacion: '', tamano: '', comentario: '' });
+      toast.success("Propiedad agregada exitosamente");
+      setShowAddPropiedad(false);
+      setPropiedadForm({
+        nombre: "",
+        localizacion: "",
+        tamano: "",
+        comentario: "",
+      });
 
-    await loadPropiedades();
-  } catch (error) {
-    console.error('Error adding propiedad:', error);
-    toast.error('Error al agregar propiedad');
-  }
-};
+      await loadPropiedades();
+    } catch (error) {
+      console.error("Error adding propiedad:", error);
+      toast.error("Error al agregar propiedad");
+    }
+  };
   // NUEVO — abrir modal de edición
   const handleOpenEditPropiedad = (p: Propiedad) => {
     setShowEditPropiedad(p);
     setPropiedadEditForm({
-      nombre: p.nombre || '',
-      localizacion: p.localizacion || '',
-      tamano: p.tamano || '',
-      comentario: p.comentario || '',
+      nombre: p.nombre || "",
+      localizacion: p.localizacion || "",
+      tamano: p.tamano || "",
+      comentario: p.comentario || "",
     });
   };
 
@@ -493,31 +575,37 @@ const handleAddPropiedad = async (e: React.FormEvent) => {
         comentario: propiedadEditForm.comentario || undefined,
       });
 
-  alert.success('Propiedad actualizada');
+      alert.success("Propiedad actualizada");
       setShowEditPropiedad(null);
       await loadPropiedades();
     } catch (e) {
       console.error(e);
-  alert.error('Error', 'No se pudo actualizar la propiedad');
+      alert.error("Error", "No se pudo actualizar la propiedad");
     }
   };
 
   // NUEVO — activar/desactivar
   const handleTogglePropiedad = async (id: number, currentActive?: boolean) => {
     // optimista
-    setPropiedades(prev => prev.map(p => p.id === id ? ({ ...p, active: !p.active }) : p));
+    setPropiedades((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, active: !p.active } : p))
+    );
     try {
       await PropiedadService.toggleActivePropiedad(id);
     } catch (e) {
       // revertir si falla
-      setPropiedades(prev => prev.map(p => p.id === id ? ({ ...p, active: currentActive ?? p.active }) : p));
+      setPropiedades((prev) =>
+        prev.map((p) =>
+          p.id === id ? { ...p, active: currentActive ?? p.active } : p
+        )
+      );
       console.error(e);
-      toast.error('No se pudo cambiar el estado');
+      toast.error("No se pudo cambiar el estado");
     }
   };
 
   useEffect(() => {
-    if (activeSection === 'bitacora') loadBitacora();
+    if (activeSection === "bitacora") loadBitacora();
   }, [activeSection, currentUser?.id]);
 
   useEffect(() => {
@@ -525,41 +613,45 @@ const handleAddPropiedad = async (e: React.FormEvent) => {
   }, [currentUser?.id]);
 
   useEffect(() => {
-    if (activeSection === 'ofertas') {
+    if (activeSection === "ofertas") {
       loadMyProducts();
     }
   }, [activeSection, currentUser?.id]);
 
   useEffect(() => {
-    if (activeSection === 'cultivos') loadCultivos();
-  }, [activeSection, currentUser?.id]);
-
-
-  useEffect(() => {
-    if (activeSection === 'propiedades') loadPropiedades();
-  }, [activeSection, currentUser?.id]);
-
-
-  useEffect(() => {
-    if (activeSection === 'ordenes') loadOrders();
+    if (activeSection === "cultivos") loadCultivos();
   }, [activeSection, currentUser?.id]);
 
   useEffect(() => {
-    if (activeSection === 'tienda') {
+    if (activeSection === "propiedades") loadPropiedades();
+  }, [activeSection, currentUser?.id]);
+
+  useEffect(() => {
+    if (activeSection === "ordenes") loadOrders();
+  }, [activeSection, currentUser?.id]);
+
+  useEffect(() => {
+    if (activeSection === "tienda") {
       loadActiveVetShops();
     }
   }, [activeSection]);
 
   const handleLogout = () => {
-    localStorage.removeItem('agroglobal_token');
-    window.location.href = '/dashboard-select';
+    localStorage.removeItem("agroglobal_token");
+    window.location.href = "/dashboard-select";
   };
 
   // ===== Productos =====
   const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!productForm.name || !productForm.description || !productForm.price || !productForm.unit || !productForm.stock) {
-      toast.error('Por favor completa todos los campos requeridos');
+    if (
+      !productForm.name ||
+      !productForm.description ||
+      !productForm.price ||
+      !productForm.unit ||
+      !productForm.stock
+    ) {
+      toast.error("Por favor completa todos los campos requeridos");
       return;
     }
     try {
@@ -569,19 +661,32 @@ const handleAddPropiedad = async (e: React.FormEvent) => {
         price: parseFloat(productForm.price),
         unit: productForm.unit,
         stock: parseInt(productForm.stock),
-        image: productForm.image || 'https://images.pexels.com/photos/1458694/pexels-photo-1458694.jpeg',
+        image:
+          productForm.image ||
+          "https://images.pexels.com/photos/1458694/pexels-photo-1458694.jpeg",
         category: productForm.category,
-        status: 'pending',        // <- aquí
+        status: "pending", // <- aquí
         farmerId: currentUser?.id ?? 1,
       });
 
-  alert.success('Producto agregado', 'Pendiente de aprobación por el administrador.');
+      alert.success(
+        "Producto agregado",
+        "Pendiente de aprobación por el administrador."
+      );
       setShowAddProduct(false);
-      setProductForm({ name: '', description: '', price: '', unit: '', stock: '', image: '', category: 'otros' });
+      setProductForm({
+        name: "",
+        description: "",
+        price: "",
+        unit: "",
+        stock: "",
+        image: "",
+        category: "otros",
+      });
       await loadMyProducts();
     } catch (error) {
-      console.error('Error adding product:', error);
-  alert.error('Error', 'No se pudo agregar el producto');
+      console.error("Error adding product:", error);
+      alert.error("Error", "No se pudo agregar el producto");
     }
   };
 
@@ -596,7 +701,7 @@ const handleAddPropiedad = async (e: React.FormEvent) => {
       setMyProducts(data);
     } catch (e) {
       console.error(e);
-      toast.error('No se pudieron cargar tus ofertas');
+      toast.error("No se pudieron cargar tus ofertas");
     } finally {
       setLoading(false);
     }
@@ -606,13 +711,13 @@ const handleAddPropiedad = async (e: React.FormEvent) => {
   const handleOpenNewProduct = () => {
     setEditingProductId(null);
     setProductForm({
-      name: '',
-      description: '',
-      price: '',
-      unit: '',
-      stock: '',
-      image: '',
-      category: 'otros'
+      name: "",
+      description: "",
+      price: "",
+      unit: "",
+      stock: "",
+      image: "",
+      category: "otros",
     });
     setShowAddProduct(true);
   };
@@ -623,11 +728,11 @@ const handleAddPropiedad = async (e: React.FormEvent) => {
     setProductForm({
       name: p.name,
       description: p.description,
-      price: String(p.price ?? ''),
+      price: String(p.price ?? ""),
       unit: p.unit,
-      stock: String(p.stock ?? ''),
-      image: p.image ?? '',
-      category: p.category
+      stock: String(p.stock ?? ""),
+      image: p.image ?? "",
+      category: p.category,
     });
     setShowAddProduct(true);
   };
@@ -636,8 +741,14 @@ const handleAddPropiedad = async (e: React.FormEvent) => {
   const handleSaveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!productForm.name || !productForm.description || !productForm.price || !productForm.unit || !productForm.stock) {
-      toast.error('Por favor completa todos los campos requeridos');
+    if (
+      !productForm.name ||
+      !productForm.description ||
+      !productForm.price ||
+      !productForm.unit ||
+      !productForm.stock
+    ) {
+      toast.error("Por favor completa todos los campos requeridos");
       return;
     }
 
@@ -648,7 +759,9 @@ const handleAddPropiedad = async (e: React.FormEvent) => {
         price: parseFloat(productForm.price),
         unit: productForm.unit,
         stock: parseInt(productForm.stock),
-        image: productForm.image || 'https://images.pexels.com/photos/1458694/pexels-photo-1458694.jpeg',
+        image:
+          productForm.image ||
+          "https://images.pexels.com/photos/1458694/pexels-photo-1458694.jpeg",
         category: productForm.category,
         farmerId: currentUser?.id ?? 1, // usa el id real
         // si tu backend no pone por defecto, envía status:
@@ -658,11 +771,11 @@ const handleAddPropiedad = async (e: React.FormEvent) => {
       if (editingProductId == null) {
         // crear
         await ProductService.createProduct(payload);
-  alert.success('Producto creado', 'Queda pendiente de aprobación.');
+        alert.success("Producto creado", "Queda pendiente de aprobación.");
       } else {
         // actualizar
         await ProductService.updateProduct(editingProductId, payload);
-  alert.success('Producto actualizado');
+        alert.success("Producto actualizado");
       }
 
       setShowAddProduct(false);
@@ -670,13 +783,16 @@ const handleAddPropiedad = async (e: React.FormEvent) => {
       await loadMyProducts();
     } catch (error) {
       console.error(error);
-  alert.error('Error', 'No se pudo guardar el producto');
+      alert.error("Error", "No se pudo guardar el producto");
     }
   };
 
   // Eliminar
   const handleDeleteProduct = async (id: number, name?: string) => {
-    const ok = await alert.confirm('¿Eliminar producto?', name ? `Se eliminará "${name}"` : 'Esta acción no se puede deshacer.');
+    const ok = await alert.confirm(
+      "¿Eliminar producto?",
+      name ? `Se eliminará "${name}"` : "Esta acción no se puede deshacer."
+    );
     if (!ok) return;
 
     // 1) Estado previo para revertir si falla
@@ -686,26 +802,29 @@ const handleAddPropiedad = async (e: React.FormEvent) => {
 
     try {
       await ProductService.deleteProduct(id);
-  alert.success('Producto eliminado');
+      alert.success("Producto eliminado");
       //await loadMyProducts();
     } catch (error) {
       console.error(error);
-  alert.error('Error', 'No se pudo eliminar el producto');
+      alert.error("Error", "No se pudo eliminar el producto");
       // Revertimos si el backend falló
       setMyProducts(prev);
     }
   };
 
-
   // ===== Bitácora: Crear / Editar (mismo modal) =====
   const handleAddBitacora = async (e: React.FormEvent) => {
     e.preventDefault();
     if (
-      !bitacoraForm.tipoActividad || !bitacoraForm.tipoCultivo ||
-      !bitacoraForm.fechaInicio || !bitacoraForm.fechaFin ||
-      !bitacoraForm.detalle || !bitacoraForm.lote || !bitacoraForm.cantidad
+      !bitacoraForm.tipoActividad ||
+      !bitacoraForm.tipoCultivo ||
+      !bitacoraForm.fechaInicio ||
+      !bitacoraForm.fechaFin ||
+      !bitacoraForm.detalle ||
+      !bitacoraForm.lote ||
+      !bitacoraForm.cantidad
     ) {
-      toast.error('Por favor completa todos los campos requeridos');
+      toast.error("Por favor completa todos los campos requeridos");
       return;
     }
 
@@ -721,7 +840,7 @@ const handleAddPropiedad = async (e: React.FormEvent) => {
           observaciones: bitacoraForm.observaciones,
           cantidad: bitacoraForm.cantidad,
         });
-  alert.success('Bitácora actualizada');
+        alert.success("Bitácora actualizada");
       } else {
         await BitacoraService.createEntry({
           tipoActividad: bitacoraForm.tipoActividad,
@@ -734,19 +853,25 @@ const handleAddPropiedad = async (e: React.FormEvent) => {
           cantidad: bitacoraForm.cantidad,
           //farmerId: currentUser?.id ?? 1
         });
-  alert.success('Entrada agregada', 'Bitácora actualizada');
+        alert.success("Entrada agregada", "Bitácora actualizada");
       }
 
       setShowAddBitacora(false);
       setEditingEntryId(null);
       setBitacoraForm({
-        tipoActividad: '', tipoCultivo: '', fechaInicio: '', fechaFin: '',
-        detalle: '', lote: '', observaciones: '', cantidad: ''
+        tipoActividad: "",
+        tipoCultivo: "",
+        fechaInicio: "",
+        fechaFin: "",
+        detalle: "",
+        lote: "",
+        observaciones: "",
+        cantidad: "",
       });
       await loadBitacora();
     } catch (error) {
-      console.error('Error guardando entrada de bitácora:', error);
-  alert.error('Error', 'No se pudo guardar la entrada');
+      console.error("Error guardando entrada de bitácora:", error);
+      alert.error("Error", "No se pudo guardar la entrada");
     }
   };
 
@@ -755,13 +880,12 @@ const handleAddPropiedad = async (e: React.FormEvent) => {
     setBitacoraForm({
       tipoActividad: entry.tipoActividad,
       tipoCultivo: entry.tipoCultivo,
-      fechaInicio: entry.fechaInicio?.slice(0, 10) ?? '',
-      fechaFin: entry.fechaFin?.slice(0, 10) ?? '',
+      fechaInicio: entry.fechaInicio?.slice(0, 10) ?? "",
+      fechaFin: entry.fechaFin?.slice(0, 10) ?? "",
       detalle: entry.detalle,
       lote: entry.lote,
-      observaciones: entry.observaciones ?? '',
+      observaciones: entry.observaciones ?? "",
       cantidad: entry.cantidad,
-
     });
     setEditingEntryId(entry.id);
     setShowAddBitacora(true);
@@ -769,7 +893,10 @@ const handleAddPropiedad = async (e: React.FormEvent) => {
 
   // Elimina por id (una sola función)
   const handleDeleteBitacora = async (id: number) => {
-    const ok = await alert.confirm('¿Eliminar entrada?', 'Esta acción no se puede deshacer.');
+    const ok = await alert.confirm(
+      "¿Eliminar entrada?",
+      "Esta acción no se puede deshacer."
+    );
     if (!ok) return;
 
     const prev = bitacoraEntries;
@@ -777,11 +904,11 @@ const handleAddPropiedad = async (e: React.FormEvent) => {
 
     try {
       await BitacoraService.deleteEntry(id);
-      setBitacoraEntries(prev => prev.filter(e => e.id !== id));
-  alert.success('Entrada eliminada');
+      setBitacoraEntries((prev) => prev.filter((e) => e.id !== id));
+      alert.success("Entrada eliminada");
     } catch (error) {
       console.error(error);
-  alert.error('Error', 'No se pudo eliminar la entrada');
+      alert.error("Error", "No se pudo eliminar la entrada");
       setBitacoraEntries(prev); // revertir
     }
   };
@@ -790,7 +917,7 @@ const handleAddPropiedad = async (e: React.FormEvent) => {
   const handleAddCultivo = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!cultivoForm.name || !cultivoForm.variedad) {
-      toast.error('Por favor completa los campos requeridos');
+      toast.error("Por favor completa los campos requeridos");
       return;
     }
 
@@ -802,27 +929,27 @@ const handleAddPropiedad = async (e: React.FormEvent) => {
         image: cultivoForm.image || undefined,
       });
 
-  alert.success('Cultivo agregado');
+      alert.success("Cultivo agregado");
       setShowAddCultivo(false);
-      setCultivoForm({ name: '', variedad: '', comentario: '', image: '' });
+      setCultivoForm({ name: "", variedad: "", comentario: "", image: "" });
 
       // Si el backend devuelve el objeto creado:
       if (created && created.id) {
-        setCultivos(prev => [created, ...prev]);
+        setCultivos((prev) => [created, ...prev]);
       } else {
         // si no, recarga la lista desde el backend
         await loadCultivos();
       }
     } catch (error) {
-      console.error('Error adding cultivo:', error);
-  alert.error('Error', 'No se pudo agregar cultivo');
+      console.error("Error adding cultivo:", error);
+      alert.error("Error", "No se pudo agregar cultivo");
     }
   };
 
   // Abrir modal "nuevo cultivo"
   const handleOpenNewCultivo = () => {
     setEditingCultivoId(null);
-    setCultivoForm({ name: '', variedad: '', comentario: '', image: '' });
+    setCultivoForm({ name: "", variedad: "", comentario: "", image: "" });
     setShowAddCultivo(true);
   };
 
@@ -830,10 +957,10 @@ const handleAddPropiedad = async (e: React.FormEvent) => {
   const handleOpenEditCultivo = (c: Cultivo) => {
     setEditingCultivoId(c.id);
     setCultivoForm({
-      name: c.name ?? '',
-      variedad: c.variedad ?? '',
-      comentario: c.comentario ?? '',
-      image: c.image ?? '',
+      name: c.name ?? "",
+      variedad: c.variedad ?? "",
+      comentario: c.comentario ?? "",
+      image: c.image ?? "",
     });
     setShowAddCultivo(true);
   };
@@ -842,7 +969,7 @@ const handleAddPropiedad = async (e: React.FormEvent) => {
   const handleSaveCultivo = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!cultivoForm.name || !cultivoForm.variedad) {
-      toast.error('Por favor completa los campos requeridos');
+      toast.error("Por favor completa los campos requeridos");
       return;
     }
 
@@ -856,106 +983,131 @@ const handleAddPropiedad = async (e: React.FormEvent) => {
 
       if (editingCultivoId == null) {
         await CultivoService.createCultivo(payload);
-  alert.success('Cultivo creado');
+        alert.success("Cultivo creado");
       } else {
         await CultivoService.updateCultivo(editingCultivoId, payload);
-  alert.success('Cultivo actualizado');
+        alert.success("Cultivo actualizado");
       }
 
       setShowAddCultivo(false);
       setEditingCultivoId(null);
       await loadCultivos();
     } catch (err) {
-      console.error('Error guardando cultivo:', err);
-  alert.error('Error', 'No se pudo guardar el cultivo');
+      console.error("Error guardando cultivo:", err);
+      alert.error("Error", "No se pudo guardar el cultivo");
     }
   };
 
   // Eliminar
   const handleDeleteCultivo = async (id: number, name?: string) => {
-    const ok = await alert.confirm('¿Eliminar cultivo?', name ? `Se eliminará "${name}"` : 'Esta acción no se puede deshacer.');
+    const ok = await alert.confirm(
+      "¿Eliminar cultivo?",
+      name ? `Se eliminará "${name}"` : "Esta acción no se puede deshacer."
+    );
     if (!ok) return;
     try {
       await CultivoService.deleteCultivo(id);
-  alert.success('Cultivo eliminado');
+      alert.success("Cultivo eliminado");
       await loadCultivos();
     } catch (err) {
       console.error(err);
-  alert.error('Error', 'No se pudo eliminar el cultivo');
+      alert.error("Error", "No se pudo eliminar el cultivo");
     }
   };
 
   // ===== Sidebar / Filtros / Render secciones =====
   const sidebarItems = [
-    { id: 'marketplace', name: 'Marketplace', icon: <ShoppingCart className="h-5 w-5" /> },
-    { id: 'ofertas', name: 'Mis Ofertas', icon: <Package className="h-5 w-5" /> },
-    { id: 'tienda', name: 'Tienda', icon: <Store className="h-5 w-5" /> },
-    { id: 'ordenes', name: 'Órdenes', icon: <BookOpen className="h-5 w-5" /> },
-    { id: 'bitacora', name: 'Bitácora', icon: <BookOpen className="h-5 w-5" /> },
-    { id: 'cultivos', name: 'Cultivos', icon: <Sprout className="h-5 w-5" /> },
-    { id: 'propiedades', name: 'Propiedades', icon: <Home className="h-5 w-5" /> }
+    {
+      id: "marketplace",
+      name: "Marketplace",
+      icon: <ShoppingCart className="h-5 w-5" />,
+    },
+    {
+      id: "ofertas",
+      name: "Mis Ofertas",
+      icon: <Package className="h-5 w-5" />,
+    },
+    { id: "tienda", name: "Tienda", icon: <Store className="h-5 w-5" /> },
+    { id: "ordenes", name: "Órdenes", icon: <BookOpen className="h-5 w-5" /> },
+    {
+      id: "bitacora",
+      name: "Bitácora",
+      icon: <BookOpen className="h-5 w-5" />,
+    },
+    { id: "cultivos", name: "Cultivos", icon: <Sprout className="h-5 w-5" /> },
+    {
+      id: "propiedades",
+      name: "Propiedades",
+      icon: <Home className="h-5 w-5" />,
+    },
   ];
   const categories = [
-    { id: 'all', name: 'Todos', icon: '🌾' },
-    { id: 'frutas', name: 'Frutas', icon: '🍎' },
-    { id: 'verduras', name: 'Verduras', icon: '🥬' },
-    { id: 'granos', name: 'Granos', icon: '🌽' },
+    { id: "all", name: "Todos", icon: "🌾" },
+    { id: "frutas", name: "Frutas", icon: "🍎" },
+    { id: "verduras", name: "Verduras", icon: "🥬" },
+    { id: "granos", name: "Granos", icon: "🌽" },
   ];
 
-  const filteredProducts = products.filter(p => {
-    const byCat = categoryFilter === 'all' || p.category === categoryFilter;
+  const filteredProducts = products.filter((p) => {
+    const byCat = categoryFilter === "all" || p.category === categoryFilter;
     const byText = p.name.toLowerCase().includes(searchTerm.toLowerCase());
     return byCat && byText;
   });
 
   const addToCart = (product: ProductUI, quantity: number): void => {
-  setCart(prev => {
-    const exists = prev.find(i => i.id === product.id);
-    if (exists) {
-      return prev.map(i => i.id === product.id ? { ...i, quantity: i.quantity + quantity } : i);
+    setCart((prev) => {
+      const exists = prev.find((i) => i.id === product.id);
+      if (exists) {
+        return prev.map((i) =>
+          i.id === product.id ? { ...i, quantity: i.quantity + quantity } : i
+        );
+      }
+      return [...prev, { ...product, quantity }];
+    });
+  };
+
+  const updateCartQuantity = (productId: number, newQty: number): void => {
+    if (newQty <= 0) return removeFromCart(productId);
+    setCart((prev) =>
+      prev.map((i) => (i.id === productId ? { ...i, quantity: newQty } : i))
+    );
+  };
+
+  const removeFromCart = (productId: number): void => {
+    setCart((prev) => prev.filter((i) => i.id !== productId));
+  };
+
+  const getTotalItems = (): number => cart.reduce((t, i) => t + i.quantity, 0);
+  const getSubtotal = (): number =>
+    cart.reduce((t, i) => t + i.price * i.quantity, 0);
+  const getIVA = (): number => getSubtotal() * 0.13;
+  const getTotal = (): number => getSubtotal() + getIVA();
+
+  const handleBuyNow = (product: ProductUI): void => {
+    if (adding) return;
+    setAdding(true);
+    try {
+      addToCart(product, productQuantity); // solo agrega al carrito
+      setSelectedProduct(null);
+      setProductQuantity(1);
+      setShowCart(true); // abre carrito
+    } finally {
+      setAdding(false);
     }
-    return [...prev, { ...product, quantity }];
-  });
-};
+  };
 
-const updateCartQuantity = (productId: number, newQty: number): void => {
-  if (newQty <= 0) return removeFromCart(productId);
-  setCart(prev => prev.map(i => i.id === productId ? { ...i, quantity: newQty } : i));
-};
-
-const removeFromCart = (productId: number): void => {
-  setCart(prev => prev.filter(i => i.id !== productId));
-};
-
-const getTotalItems = (): number => cart.reduce((t, i) => t + i.quantity, 0);
-const getSubtotal  = (): number => cart.reduce((t, i) => t + i.price * i.quantity, 0);
-const getIVA       = (): number => getSubtotal() * 0.13;
-const getTotal     = (): number => getSubtotal() + getIVA();
-
-const handleBuyNow = (product: ProductUI): void => {
-  if (adding) return;
-  setAdding(true);
-  try {
-    addToCart(product, productQuantity); // solo agrega al carrito
+  const handleAddToCart = (product: ProductUI): void => {
+    addToCart(product, productQuantity);
     setSelectedProduct(null);
     setProductQuantity(1);
-    setShowCart(true);                   // abre carrito
-  } finally {
-    setAdding(false);
-  }
-};
-
-const handleAddToCart = (product: ProductUI): void => {
-  addToCart(product, productQuantity);
-  setSelectedProduct(null);
-  setProductQuantity(1);
-};
-
+  };
 
   const renderMarketplace = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold text-gray-900">Mercado agrícola 🛒</h2>
+        <h2 className="text-3xl font-bold text-gray-900">
+          Mercado agrícola 🛒
+        </h2>
       </div>
 
       <div className="flex flex-col md:flex-row gap-4 mb-6">
@@ -971,14 +1123,15 @@ const handleAddToCart = (product: ProductUI): void => {
       </div>
 
       <div className="flex flex-wrap gap-3 mb-6">
-        {categories.map(c => (
+        {categories.map((c) => (
           <Button
             key={c.id}
-            variant={categoryFilter === c.id ? 'default' : 'outline'}
+            variant={categoryFilter === c.id ? "default" : "outline"}
             onClick={() => setCategoryFilter(c.id as any)}
-            className={categoryFilter === c.id ? 'bg-green-500 text-white' : ''}
+            className={categoryFilter === c.id ? "bg-green-500 text-white" : ""}
           >
-            <span className="mr-2">{c.icon}</span>{c.name}
+            <span className="mr-2">{c.icon}</span>
+            {c.name}
           </Button>
         ))}
       </div>
@@ -990,11 +1143,20 @@ const handleAddToCart = (product: ProductUI): void => {
           </div>
         ) : (
           filteredProducts.map((product) => (
-            <Card key={product.id} className="group hover:shadow-2xl transition-all duration-300 border-0 bg-white overflow-hidden hover:scale-105">
+            <Card
+              key={product.id}
+              className="group hover:shadow-2xl transition-all duration-300 border-0 bg-white overflow-hidden hover:scale-105"
+            >
               <div className="relative h-48 overflow-hidden">
-                <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                <img
+                  src={product.image}
+                  alt={product.name}
+                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                />
                 <div className="absolute top-3 left-3">
-                  <Badge className="bg-green-500 text-white">{product.stock} disponibles</Badge>
+                  <Badge className="bg-green-500 text-white">
+                    {product.stock} disponibles
+                  </Badge>
                 </div>
               </div>
               <CardContent className="p-4">
@@ -1009,14 +1171,21 @@ const handleAddToCart = (product: ProductUI): void => {
 
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <span className="text-2xl font-bold text-green-600">₡{product.price.toLocaleString()}</span>
-                    <span className="text-sm text-gray-500 ml-1">/{product.unit}</span>
+                    <span className="text-2xl font-bold text-green-600">
+                      ₡{product.price.toLocaleString()}
+                    </span>
+                    <span className="text-sm text-gray-500 ml-1">
+                      /{product.unit}
+                    </span>
                   </div>
                 </div>
 
                 <Button
                   className="w-full bg-green-500 hover:bg-green-600 text-white"
-                  onClick={() => { setSelectedProduct(product); setProductQuantity(1); }}
+                  onClick={() => {
+                    setSelectedProduct(product);
+                    setProductQuantity(1);
+                  }}
                 >
                   <ShoppingCart className="mr-2 h-4 w-4" />
                   Comprar Ahora
@@ -1030,32 +1199,35 @@ const handleAddToCart = (product: ProductUI): void => {
   );
 
   const renderAsistenteIA = () => (
-  <div className="flex flex-col items-center justify-center min-h-[80vh]">
-    <div className="w-full max-w-4xl mx-auto bg-white rounded-2xl shadow-2xl p-8 border border-gray-100">
-      <h2 className="text-3xl font-bold text-center mb-6 text-green-700">
-        Asistente Agrícola 🤖
-      </h2>
-      <AIAssistant />
+    <div className="flex flex-col items-center justify-center min-h-[80vh]">
+      <div className="w-full max-w-4xl mx-auto bg-white rounded-2xl shadow-2xl p-8 border border-gray-100">
+        <h2 className="text-3xl font-bold text-center mb-6 text-green-700">
+          Asistente Agrícola 🤖
+        </h2>
+        <AIAssistant />
+      </div>
     </div>
-  </div>
-);
-
+  );
 
   const toProcessing = async (id: number) => {
     // optimista
-    setOrders(prev => prev.map(o => o.id === id ? { ...o, status: 'processing' } : o));
+    setOrders((prev) =>
+      prev.map((o) => (o.id === id ? { ...o, status: "processing" } : o))
+    );
     try {
       await OrderService.markAsProcessing(id);
     } catch (e) {
       // revertir
-      setOrders(prev => prev.map(o => o.id === id ? { ...o, status: 'pending' } : o));
+      setOrders((prev) =>
+        prev.map((o) => (o.id === id ? { ...o, status: "pending" } : o))
+      );
     }
   };
 
   const toDelivered = async (id: number) => {
     // ⬇️ optimista: lo quitamos YA de la lista
     const prev = orders;
-    setOrders(prev.filter(o => o.id !== id));
+    setOrders(prev.filter((o) => o.id !== id));
     try {
       await OrderService.markAsDelivered(id);
     } catch (e) {
@@ -1069,21 +1241,31 @@ const handleAddToCart = (product: ProductUI): void => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-bold text-gray-900">Mis Ofertas 📦</h2>
-        <Button onClick={handleOpenNewProduct} className="bg-green-500 hover:bg-green-600">
+        <Button
+          onClick={handleOpenNewProduct}
+          className="bg-green-500 hover:bg-green-600"
+        >
           <Plus className="h-4 w-4 mr-2" />
           Agregar Producto
         </Button>
       </div>
 
-      {loading && <div className="text-center text-gray-500">Cargando productos…</div>}
+      {loading && (
+        <div className="text-center text-gray-500">Cargando productos…</div>
+      )}
 
       {!loading && myProducts.length === 0 && (
-        <div className="text-center text-gray-500">Aún no tienes ofertas publicadas.</div>
+        <div className="text-center text-gray-500">
+          Aún no tienes ofertas publicadas.
+        </div>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {myProducts.map((product) => (
-          <Card key={product.id} className="flex flex-col overflow-hidden hover:shadow-lg transition-shadow">
+          <Card
+            key={product.id}
+            className="flex flex-col overflow-hidden hover:shadow-lg transition-shadow"
+          >
             <div className="relative h-56 w-full">
               <img
                 src={product.image}
@@ -1093,11 +1275,11 @@ const handleAddToCart = (product: ProductUI): void => {
               <div className="absolute top-3 right-3">
                 <Badge
                   className={
-                    product.status === 'approved'
-                      ? 'bg-green-500'
-                      : product.status === 'pending'
-                        ? 'bg-yellow-500'
-                        : 'bg-red-500'
+                    product.status === "approved"
+                      ? "bg-green-500"
+                      : product.status === "pending"
+                        ? "bg-yellow-500"
+                        : "bg-red-500"
                   }
                 >
                   {product.status}
@@ -1106,10 +1288,16 @@ const handleAddToCart = (product: ProductUI): void => {
             </div>
 
             <CardContent className="p-5 grow">
-              <h3 className="text-lg font-bold text-gray-900 mb-2">{product.name}</h3>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">
+                {product.name}
+              </h3>
               <div className="space-y-2 mb-4">
-                <p className="text-sm text-gray-600">Precio: ₡{product.price.toLocaleString()}/{product.unit}</p>
-                <p className="text-sm text-gray-600">Reserva: {product.stock} {product.unit}s</p>
+                <p className="text-sm text-gray-600">
+                  Precio: ₡{product.price.toLocaleString()}/{product.unit}
+                </p>
+                <p className="text-sm text-gray-600">
+                  Reserva: {product.stock} {product.unit}s
+                </p>
               </div>
             </CardContent>
 
@@ -1137,15 +1325,20 @@ const handleAddToCart = (product: ProductUI): void => {
   const renderTienda = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold text-gray-900">Agro Veterinarias 🏪</h2>
+        <h2 className="text-3xl font-bold text-gray-900">
+          Agro Veterinarias 🏪
+        </h2>
       </div>
 
       {vetShops.length === 0 ? (
-        <div className="text-gray-500">No hay agro veterinarias activas por ahora.</div>
+        <div className="text-gray-500">
+          No hay agro veterinarias activas por ahora.
+        </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {vetShops.map((shop) => (
-            <Card key={shop.id}
+            <Card
+              key={shop.id}
               className="
     group relative overflow-hidden rounded-2xl border
     transform-gpu will-change-transform
@@ -1153,10 +1346,12 @@ const handleAddToCart = (product: ProductUI): void => {
     hover:-translate-y-1 hover:scale-[1.02] hover:shadow-xl
   "
             >
-
               <div className="relative h-48 overflow-hidden rounded-t-lg">
                 <img
-                  src={shop.image || 'https://images.pexels.com/photos/5327585/pexels-photo-5327585.jpeg'}
+                  src={
+                    shop.image ||
+                    "https://images.pexels.com/photos/5327585/pexels-photo-5327585.jpeg"
+                  }
                   alt={shop.name}
                   className="w-full h-full object-cover"
                 />
@@ -1187,12 +1382,12 @@ const handleAddToCart = (product: ProductUI): void => {
   const renderOrdenes = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold text-gray-900">Órdenes de Pedidos 📋</h2>
+        <h2 className="text-3xl font-bold text-gray-900">
+          Órdenes de Pedidos 📋
+        </h2>
       </div>
 
-      {loadingOrders && (
-        <div className="text-gray-500">Cargando órdenes…</div>
-      )}
+      {loadingOrders && <div className="text-gray-500">Cargando órdenes…</div>}
 
       {!loadingOrders && orders.length === 0 && (
         <div className="text-gray-500">No hay órdenes por ahora.</div>
@@ -1207,12 +1402,14 @@ const handleAddToCart = (product: ProductUI): void => {
             {/* Izquierda: imagen + info */}
             <div className="flex items-center gap-4">
               <img
-                src={o.productImage || '/img/placeholder.png'}
+                src={o.productImage || "/img/placeholder.png"}
                 alt={o.productName}
                 className="w-16 h-16 rounded-lg object-cover"
               />
               <div>
-                <h3 className="text-xl font-semibold text-gray-900">{o.productName}</h3>
+                <h3 className="text-xl font-semibold text-gray-900">
+                  {o.productName}
+                </h3>
                 <div className="text-sm text-gray-600">
                   <div>Cliente: {o.customerName}</div>
                   {o.customerPhone && (
@@ -1230,18 +1427,22 @@ const handleAddToCart = (product: ProductUI): void => {
             <div className="flex flex-col items-end gap-2 min-w-[126px]">
               <span
                 className={[
-                  'inline-flex items-center justify-center rounded-full px-4 py-1.5 text-sm font-semibold shadow-sm',
-                  o.status === 'pending' ? 'bg-yellow-500 text-white' :
-                    o.status === 'processing' ? 'bg-blue-500 text-white' :
-                      'bg-green-600 text-white'
-                ].join(' ')}
+                  "inline-flex items-center justify-center rounded-full px-4 py-1.5 text-sm font-semibold shadow-sm",
+                  o.status === "pending"
+                    ? "bg-yellow-500 text-white"
+                    : o.status === "processing"
+                      ? "bg-blue-500 text-white"
+                      : "bg-green-600 text-white",
+                ].join(" ")}
               >
-                {o.status === 'pending' ? 'Pendiente'
-                  : o.status === 'processing' ? 'En Proceso'
-                    : 'Entregado'}
+                {o.status === "pending"
+                  ? "Pendiente"
+                  : o.status === "processing"
+                    ? "En Proceso"
+                    : "Entregado"}
               </span>
 
-              {o.status === 'pending' && (
+              {o.status === "pending" && (
                 <Button
                   size="icon"
                   className="h-10 w-10 rounded-xl bg-blue-500 hover:bg-blue-600 text-white shadow-md hover:shadow-lg transition-shadow"
@@ -1252,7 +1453,7 @@ const handleAddToCart = (product: ProductUI): void => {
                 </Button>
               )}
 
-              {o.status === 'processing' && (
+              {o.status === "processing" && (
                 <Button
                   size="icon"
                   className="h-10 w-10 rounded-xl bg-green-500 hover:bg-green-600 text-white shadow-md hover:shadow-lg transition-shadow"
@@ -1274,9 +1475,18 @@ const handleAddToCart = (product: ProductUI): void => {
       return (
         <div className="space-y-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-3xl font-bold text-gray-900">Bitácora Agrícola 📖</h2>
-            <Button onClick={() => { setEditingEntryId(null); setShowAddBitacora(true); }} className="bg-green-500 hover:bg-green-600">
-              <Plus className="h-4 w-4 mr-2" />Nueva Entrada
+            <h2 className="text-3xl font-bold text-gray-900">
+              Bitácora Agrícola 📖
+            </h2>
+            <Button
+              onClick={() => {
+                setEditingEntryId(null);
+                setShowAddBitacora(true);
+              }}
+              className="bg-green-500 hover:bg-green-600"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Nueva Entrada
             </Button>
           </div>
           <div className="text-center text-gray-500">Cargando bitácora…</div>
@@ -1288,16 +1498,34 @@ const handleAddToCart = (product: ProductUI): void => {
       return (
         <div className="space-y-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-3xl font-bold text-gray-900">Bitácora Agrícola 📖</h2>
-            <Button onClick={() => { setEditingEntryId(null); setShowAddBitacora(true); }} className="bg-green-500 hover:bg-green-600">
-              <Plus className="h-4 w-4 mr-2" />Nueva Entrada
+            <h2 className="text-3xl font-bold text-gray-900">
+              Bitácora Agrícola 📖
+            </h2>
+            <Button
+              onClick={() => {
+                setEditingEntryId(null);
+                setShowAddBitacora(true);
+              }}
+              className="bg-green-500 hover:bg-green-600"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Nueva Entrada
             </Button>
           </div>
           <div className="text-center py-12">
             <BookOpen className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-            <p className="text-xl text-gray-500 mb-4">No hay entradas en la bitácora</p>
-            <Button onClick={() => { setEditingEntryId(null); setShowAddBitacora(true); }} className="bg-green-500 hover:bg-green-600">
-              <Plus className="h-4 w-4 mr-2" />Agregar Primera Entrada
+            <p className="text-xl text-gray-500 mb-4">
+              No hay entradas en la bitácora
+            </p>
+            <Button
+              onClick={() => {
+                setEditingEntryId(null);
+                setShowAddBitacora(true);
+              }}
+              className="bg-green-500 hover:bg-green-600"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Agregar Primera Entrada
             </Button>
           </div>
         </div>
@@ -1307,29 +1535,59 @@ const handleAddToCart = (product: ProductUI): void => {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h2 className="text-3xl font-bold text-gray-900">Bitácora Agrícola 📖</h2>
-          <Button onClick={() => { setEditingEntryId(null); setShowAddBitacora(true); }} className="bg-green-500 hover:bg-green-600">
-            <Plus className="h-4 w-4 mr-2" />Nueva Entrada
+          <h2 className="text-3xl font-bold text-gray-900">
+            Bitácora Agrícola 📖
+          </h2>
+          <Button
+            onClick={() => {
+              setEditingEntryId(null);
+              setShowAddBitacora(true);
+            }}
+            className="bg-green-500 hover:bg-green-600"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Nueva Entrada
           </Button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {bitacoraEntries.map((entry) => (
-            <Card key={entry.id} className="flex flex-col hover:shadow-lg transition-shadow">
+            <Card
+              key={entry.id}
+              className="flex flex-col hover:shadow-lg transition-shadow"
+            >
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center justify-between">
-                  <span className="text-xl font-semibold">{entry.tipoActividad}</span>
+                  <span className="text-xl font-semibold">
+                    {entry.tipoActividad}
+                  </span>
                   <Badge className="bg-green-500">{entry.tipoCultivo}</Badge>
                 </CardTitle>
               </CardHeader>
               <CardContent className="grow">
                 <div className="space-y-2 text-sm">
-                  <div><strong>Lote:</strong> {entry.lote}</div>
-                  <div><strong>Cantidad:</strong> {entry.cantidad}</div>
-                  <div><strong>Inicio:</strong> {new Date(entry.fechaInicio).toLocaleDateString()}</div>
-                  <div><strong>Fin:</strong> {new Date(entry.fechaFin).toLocaleDateString()}</div>
-                  <div><strong>Detalle:</strong> {entry.detalle}</div>
-                  {entry.observaciones && <div><strong>Observaciones:</strong> {entry.observaciones}</div>}
+                  <div>
+                    <strong>Lote:</strong> {entry.lote}
+                  </div>
+                  <div>
+                    <strong>Cantidad:</strong> {entry.cantidad}
+                  </div>
+                  <div>
+                    <strong>Inicio:</strong>{" "}
+                    {new Date(entry.fechaInicio).toLocaleDateString()}
+                  </div>
+                  <div>
+                    <strong>Fin:</strong>{" "}
+                    {new Date(entry.fechaFin).toLocaleDateString()}
+                  </div>
+                  <div>
+                    <strong>Detalle:</strong> {entry.detalle}
+                  </div>
+                  {entry.observaciones && (
+                    <div>
+                      <strong>Observaciones:</strong> {entry.observaciones}
+                    </div>
+                  )}
                 </div>
               </CardContent>
               <CardFooter className="border-t pt-4 mt-2 flex justify-end gap-2">
@@ -1361,19 +1619,31 @@ const handleAddToCart = (product: ProductUI): void => {
   const renderCultivos = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold text-gray-900">Gestión de Cultivos 🌱</h2>
-        <Button onClick={handleOpenNewCultivo} className="bg-green-500 hover:bg-green-600">
+        <h2 className="text-3xl font-bold text-gray-900">
+          Gestión de Cultivos 🌱
+        </h2>
+        <Button
+          onClick={handleOpenNewCultivo}
+          className="bg-green-500 hover:bg-green-600"
+        >
           <Plus className="h-4 w-4 mr-2" /> Agregar Cultivo
         </Button>
       </div>
 
-      {loading && <div className="text-center text-gray-500">Cargando cultivos…</div>}
+      {loading && (
+        <div className="text-center text-gray-500">Cargando cultivos…</div>
+      )}
 
       {!loading && cultivos.length === 0 && (
         <div className="text-center py-12">
           <Sprout className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-          <p className="text-xl text-gray-500 mb-4">No hay cultivos registrados</p>
-          <Button onClick={handleOpenNewCultivo} className="bg-green-500 hover:bg-green-600">
+          <p className="text-xl text-gray-500 mb-4">
+            No hay cultivos registrados
+          </p>
+          <Button
+            onClick={handleOpenNewCultivo}
+            className="bg-green-500 hover:bg-green-600"
+          >
             <Plus className="h-4 w-4 mr-2" /> Agregar Primer Cultivo
           </Button>
         </div>
@@ -1381,24 +1651,36 @@ const handleAddToCart = (product: ProductUI): void => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {cultivos.map((c) => (
-          <Card key={c.id} className="flex flex-col overflow-hidden hover:shadow-lg transition-shadow">
+          <Card
+            key={c.id}
+            className="flex flex-col overflow-hidden hover:shadow-lg transition-shadow"
+          >
             <div className="relative h-56 w-full">
               <img
-                src={c.image || 'https://images.pexels.com/photos/1458694/pexels-photo-1458694.jpeg'}
+                src={
+                  c.image ||
+                  "https://images.pexels.com/photos/1458694/pexels-photo-1458694.jpeg"
+                }
                 alt={c.name}
                 className="h-full w-full object-cover"
               />
               <div className="absolute top-3 right-3">
-                <Badge className={`${c.active ? 'bg-green-500' : 'bg-red-500'} text-white`}>
-                  {c.active ? 'Activo' : 'Inactivo'}
+                <Badge
+                  className={`${c.active ? "bg-green-500" : "bg-red-500"} text-white`}
+                >
+                  {c.active ? "Activo" : "Inactivo"}
                 </Badge>
               </div>
             </div>
 
             <CardContent className="p-5 grow">
               <h3 className="text-xl font-semibold text-gray-900">{c.name}</h3>
-              <p className="text-sm text-gray-600 mt-1">Variedad: {c.variedad}</p>
-              {c.comentario && <p className="text-sm text-gray-500 mt-1">{c.comentario}</p>}
+              <p className="text-sm text-gray-600 mt-1">
+                Variedad: {c.variedad}
+              </p>
+              {c.comentario && (
+                <p className="text-sm text-gray-500 mt-1">{c.comentario}</p>
+              )}
             </CardContent>
 
             {/* ⬇️ Footer con toggle a la IZQUIERDA y editar a la DERECHA */}
@@ -1408,15 +1690,28 @@ const handleAddToCart = (product: ProductUI): void => {
                 variant="ghost"
                 size="sm"
                 onClick={() => handleToggleCultivo(c.id, c.active)}
-                className={c.active ? 'text-red-600 hover:text-red-700' : 'text-green-600 hover:text-green-700'}
-                title={c.active ? 'Desactivar' : 'Activar'}
+                className={
+                  c.active
+                    ? "text-red-600 hover:text-red-700"
+                    : "text-green-600 hover:text-green-700"
+                }
+                title={c.active ? "Desactivar" : "Activar"}
               >
-                {c.active ? <ToggleRight className="h-5 w-5" /> : <ToggleLeft className="h-5 w-5" />}
+                {c.active ? (
+                  <ToggleRight className="h-5 w-5" />
+                ) : (
+                  <ToggleLeft className="h-5 w-5" />
+                )}
               </Button>
 
               {/* Acciones a la derecha */}
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => handleOpenEditCultivo(c)} title="Editar">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleOpenEditCultivo(c)}
+                  title="Editar"
+                >
                   <Edit className="h-4 w-4" />
                 </Button>
                 {/* Si quieres dejar también eliminar, descomenta: */}
@@ -1426,30 +1721,39 @@ const handleAddToCart = (product: ProductUI): void => {
               </div>
             </CardFooter>
           </Card>
-
         ))}
       </div>
     </div>
   );
 
-
   const renderPropiedades = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-bold text-gray-900">Mis Propiedades 🏡</h2>
-        <Button onClick={() => setShowAddPropiedad(true)} className="bg-green-500 hover:bg-green-600">
+        <Button
+          onClick={() => setShowAddPropiedad(true)}
+          className="bg-green-500 hover:bg-green-600"
+        >
           <Plus className="h-4 w-4 mr-2" /> Agregar Propiedad
         </Button>
       </div>
 
-      {loading && <div className="text-center text-gray-500">Cargando propiedades…</div>}
+      {loading && (
+        <div className="text-center text-gray-500">Cargando propiedades…</div>
+      )}
 
-      {(!loading && propiedades.length === 0) ? (
+      {!loading && propiedades.length === 0 ? (
         <div className="text-center py-12">
           <Home className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-          <p className="text-xl text-gray-500 mb-4">No hay propiedades registradas</p>
-          <Button onClick={() => setShowAddPropiedad(true)} className="bg-green-500 hover:bg-green-600">
-            <Plus className="h-4 w-4 mr-2" />Agregar Primera Propiedad
+          <p className="text-xl text-gray-500 mb-4">
+            No hay propiedades registradas
+          </p>
+          <Button
+            onClick={() => setShowAddPropiedad(true)}
+            className="bg-green-500 hover:bg-green-600"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Agregar Primera Propiedad
           </Button>
         </div>
       ) : (
@@ -1467,19 +1771,28 @@ const handleAddToCart = (product: ProductUI): void => {
                     <MapPin className="h-4 w-4 mr-2 text-gray-500" />
                     <span>{p.localizacion}</span>
                   </div>
-                  <div><strong>Tamaño:</strong> {p.tamano}</div>
-                  {p.comentario && <div className="text-gray-600">{p.comentario}</div>}
+                  <div>
+                    <strong>Tamaño:</strong> {p.tamano}
+                  </div>
+                  {p.comentario && (
+                    <div className="text-gray-600">{p.comentario}</div>
+                  )}
                 </div>
               </div>
 
               {/* Derecha: estado + acciones */}
               <div className="flex items-center gap-3">
-                <Badge className={p.active ? 'bg-green-600' : 'bg-red-500'}>
-                  {p.active ? 'Activa' : 'Inactiva'}
+                <Badge className={p.active ? "bg-green-600" : "bg-red-500"}>
+                  {p.active ? "Activa" : "Inactiva"}
                 </Badge>
 
                 {/* Editar */}
-                <Button variant="outline" size="icon" onClick={() => handleOpenEditPropiedad(p)} title="Editar">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => handleOpenEditPropiedad(p)}
+                  title="Editar"
+                >
                   <Edit className="h-4 w-4" />
                 </Button>
 
@@ -1488,9 +1801,13 @@ const handleAddToCart = (product: ProductUI): void => {
                   variant="outline"
                   size="icon"
                   onClick={() => handleTogglePropiedad(p.id, p.active)}
-                  title={p.active ? 'Desactivar' : 'Activar'}
+                  title={p.active ? "Desactivar" : "Activar"}
                 >
-                  {p.active ? <ToggleRight className="h-5 w-5 text-red-600" /> : <ToggleLeft className="h-5 w-5 text-green-600" />}
+                  {p.active ? (
+                    <ToggleRight className="h-5 w-5 text-red-600" />
+                  ) : (
+                    <ToggleLeft className="h-5 w-5 text-green-600" />
+                  )}
                 </Button>
               </div>
             </div>
@@ -1502,29 +1819,51 @@ const handleAddToCart = (product: ProductUI): void => {
 
   const renderContent = () => {
     switch (activeSection) {
-      case 'marketplace': return renderMarketplace();
-      case 'ofertas': return renderOfertas();
-      case 'tienda': return renderTienda();
-      case 'ordenes': return renderOrdenes();
-      case 'bitacora': return renderBitacora();
-      case 'cultivos': return renderCultivos();
-      case 'propiedades': return renderPropiedades();
-      case 'ia': return renderAsistenteIA(); // 👈 agregado
-      default: return renderMarketplace();
+      case "marketplace":
+        return renderMarketplace();
+      case "ofertas":
+        return renderOfertas();
+      case "tienda":
+        return renderTienda();
+      case "ordenes":
+        return renderOrdenes();
+      case "bitacora":
+        return renderBitacora();
+      case "cultivos":
+        return renderCultivos();
+      case "propiedades":
+        return renderPropiedades();
+      case "ia":
+        return renderAsistenteIA(); // 👈 agregado
+      default:
+        return renderMarketplace();
     }
   };
 
   return (
-    <div className={`min-h-screen transition-colors duration-300 ${darkSidebar? "bg-[#0f172a] text-white": "bg-gradient-to-br from-green-50 via-emerald-50 to-green-100 text-gray-900"}`}>
+    <div
+      className={`min-h-screen transition-colors duration-300 ${darkSidebar ? "bg-[#0f172a] text-white" : "bg-gradient-to-br from-green-50 via-emerald-50 to-green-100 text-gray-900"}`}
+    >
       {/* Header */}
       <header className="bg-white/95 backdrop-blur-sm shadow-lg sticky top-0 z-40">
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            <motion.div className="flex items-center space-x-3" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5 }}>
-              <div className="bg-gradient-to-r from-green-500 to-blue-500 p-2 rounded-xl"><Leaf className="h-8 w-8 text-white" /></div>
+            <motion.div
+              className="flex items-center space-x-3"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5 }}
+            >
+              <div className="bg-gradient-to-r from-green-500 to-blue-500 p-2 rounded-xl">
+                <Leaf className="h-8 w-8 text-white" />
+              </div>
               <div>
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">AgroGlobal</h1>
-                <p className="text-sm text-black-500">Mercado de agricultor  🎑</p>
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
+                  AgroGlobal
+                </h1>
+                <p className="text-sm text-black-500">
+                  Mercado de agricultor 🎑
+                </p>
               </div>
             </motion.div>
             <div className="flex items-center space-x-4">
@@ -1543,7 +1882,11 @@ const handleAddToCart = (product: ProductUI): void => {
                 )}
               </Button>
 
-              <Button variant="ghost" size="sm" onClick={() => setShowProfile(!showProfile)}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowProfile(!showProfile)}
+              >
                 <Avatar className="h-8 w-8">
                   <AvatarFallback>
                     <LeafyGreen className="h-5 w-5 text-green-700" />
@@ -1570,8 +1913,13 @@ const handleAddToCart = (product: ProductUI): void => {
               <p className="text-sm text-gray-500">agricultor@agroglobal.com</p>
             </div>
             <div className="p-2">
-              <Button variant="ghost" className="w-full justify-start text-red-600 hover:bg-red-50" onClick={handleLogout}>
-                <LogOut className="mr-2 h-4 w-4" />Cerrar Sesión
+              <Button
+                variant="ghost"
+                className="w-full justify-start text-red-600 hover:bg-red-50"
+                onClick={handleLogout}
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                Cerrar Sesión
               </Button>
             </div>
           </motion.div>
@@ -1579,131 +1927,186 @@ const handleAddToCart = (product: ProductUI): void => {
       </AnimatePresence>
 
       <div className="flex min-h-screen  pt-[0px]">
-
-{/* Sidebar */}
-<div className="w-64 bg-white dark:bg-gray-900 shadow-lg border-r border-gray-200 dark:border-gray-700 flex-shrink-0 h-screen sticky top-0">
-  <div className="p-6 space-y-2">
-    {/* --- ASISTENTE IA --- */}
-    <Button
-      onClick={() => {
-        setActiveSection("ia");
-        setIsCommercialOpen(false); // cierra gestión comercial
-      }}
-      className={`w-full justify-start text-base font-semibold py-4 transition-all duration-200 rounded-lg ${
-        activeSection === "ia"
-          ? "bg-gradient-to-r from-green-400 to-green-500 text-white shadow-md"
-          : "bg-white hover:bg-green-50 text-gray-800"
-      }`}
-    >
-      <Bot className="h-5 w-5 mr-2" />
-      Asistente IA
-    </Button>
-
-    {/* --- GESTIÓN COMERCIAL (con dropdown) --- */}
-    <Button
-      onClick={() => {
-        const next = !isCommercialOpen;
-        setIsCommercialOpen(next);
-        setActiveSection("commercial");
-        if (!next) setActiveSection(""); // si se cierra, desmarca el botón
-      }}
-      className={`w-full justify-between text-base font-semibold py-4 transition-all duration-200 rounded-lg ${
-        activeSection === "commercial" && isCommercialOpen
-          ? "bg-gradient-to-r from-green-400 to-green-500 text-white shadow-md"
-          : "bg-white hover:bg-green-50 text-gray-800"
-      }`}
-    >
-      <div className="flex items-center">
-        <Briefcase className="h-5 w-5 mr-2" />
-        Gestión Comercial
-      </div>
-      <motion.div
-        animate={{ rotate: isCommercialOpen ? 90 : 0 }}
-        transition={{ duration: 0.2 }}
-      >
-        <ChevronRight className="h-4 w-4" />
-      </motion.div>
-    </Button>
-
-    {/* --- SUBMENÚ --- */}
-    <AnimatePresence>
-      {isCommercialOpen && (
-        <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: "auto" }}
-          exit={{ opacity: 0, height: 0 }}
-          transition={{ duration: 0.3 }}
-          className="ml-6 mt-2 space-y-1 overflow-hidden"
-        >
-          {[
-            { id: "marketplace", name: "Mercado", icon: <ShoppingCart className="h-5 w-5" /> },
-            { id: "ofertas", name: "Mis Ofertas", icon: <Package className="h-5 w-5" /> },
-            { id: "tienda", name: "Tienda", icon: <Store className="h-5 w-5" /> },
-            { id: "ordenes", name: "Órdenes", icon: <ClipboardList className="h-5 w-5" /> },
-            { id: "bitacora", name: "Bitácora", icon: <BookOpen className="h-5 w-5" /> },
-            { id: "propiedades", name: "Propiedades", icon: <Home className="h-5 w-5" /> },
-            { id: "cultivos", name: "Cultivos", icon: <Sprout className="h-5 w-5" /> },
-          ].map((item) => (
+        {/* Sidebar */}
+        <div className="w-64 bg-white dark:bg-gray-900 shadow-lg border-r border-gray-200 dark:border-gray-700 flex-shrink-0 h-screen sticky top-0">
+          <div className="p-6 space-y-2">
+            {/* --- ASISTENTE IA --- */}
             <Button
-              key={item.id}
-              size="sm"
-              onClick={() => setActiveSection(item.id)}
-              className={`w-full justify-start transition-all duration-200 rounded-md ${
-                activeSection === item.id
-                  ? "bg-gradient-to-r from-green-400 to-green-500 text-white shadow"
-                  : "bg-white hover:bg-green-50 text-gray-700 "
+              onClick={() => {
+                setActiveSection("ia");
+                setIsCommercialOpen(false); // cierra gestión comercial
+              }}
+              className={`w-full justify-start text-base font-semibold py-4 transition-all duration-200 rounded-lg ${
+                activeSection === "ia"
+                  ? "bg-gradient-to-r from-green-400 to-green-500 text-white shadow-md"
+                  : "bg-white hover:bg-green-50 text-gray-800"
               }`}
             >
-              {item.icon}
-              <span className="ml-3">{item.name}</span>
+              <Bot className="h-5 w-5 mr-2" />
+              Asistente IA
             </Button>
-          ))}
-        </motion.div>
-      )}
-    </AnimatePresence>
-  </div>
-</div>
 
+            {/* --- GESTIÓN COMERCIAL (con dropdown) --- */}
+            <Button
+              onClick={() => {
+                const next = !isCommercialOpen;
+                setIsCommercialOpen(next);
+                setActiveSection("commercial");
+                if (!next) setActiveSection(""); // si se cierra, desmarca el botón
+              }}
+              className={`w-full justify-between text-base font-semibold py-4 transition-all duration-200 rounded-lg ${
+                activeSection === "commercial" && isCommercialOpen
+                  ? "bg-gradient-to-r from-green-400 to-green-500 text-white shadow-md"
+                  : "bg-white hover:bg-green-50 text-gray-800"
+              }`}
+            >
+              <div className="flex items-center">
+                <Briefcase className="h-5 w-5 mr-2" />
+                Gestión Comercial
+              </div>
+              <motion.div
+                animate={{ rotate: isCommercialOpen ? 90 : 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </motion.div>
+            </Button>
 
-  {/* Contenido principal */}
-  <div
-    className={`flex-1 overflow-y-auto bg-gradient-to-br from-green-50 to-emerald-50 p-8 ${
-      activeSection === "ia" ? "col-span-2" : ""
-    }`}
-  >
-    <AnimatePresence mode="wait">
-      <motion.div
-        key={activeSection}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -20 }}
-        transition={{ duration: 0.3 }}
-      >
-        {renderContent()}
-      </motion.div>
-    </AnimatePresence>
-  </div>
-</div>
+            {/* --- SUBMENÚ --- */}
+            <AnimatePresence>
+              {isCommercialOpen && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="ml-6 mt-2 space-y-1 overflow-hidden"
+                >
+                  {[
+                    {
+                      id: "marketplace",
+                      name: "Mercado",
+                      icon: <ShoppingCart className="h-5 w-5" />,
+                    },
+                    {
+                      id: "ofertas",
+                      name: "Mis Ofertas",
+                      icon: <Package className="h-5 w-5" />,
+                    },
+                    {
+                      id: "tienda",
+                      name: "Tienda",
+                      icon: <Store className="h-5 w-5" />,
+                    },
+                    {
+                      id: "ordenes",
+                      name: "Órdenes",
+                      icon: <ClipboardList className="h-5 w-5" />,
+                    },
+                    {
+                      id: "bitacora",
+                      name: "Bitácora",
+                      icon: <BookOpen className="h-5 w-5" />,
+                    },
+                    {
+                      id: "propiedades",
+                      name: "Propiedades",
+                      icon: <Home className="h-5 w-5" />,
+                    },
+                    {
+                      id: "cultivos",
+                      name: "Cultivos",
+                      icon: <Sprout className="h-5 w-5" />,
+                    },
+                  ].map((item) => (
+                    <Button
+                      key={item.id}
+                      size="sm"
+                      onClick={() => setActiveSection(item.id)}
+                      className={`w-full justify-start transition-all duration-200 rounded-md ${
+                        activeSection === item.id
+                          ? "bg-gradient-to-r from-green-400 to-green-500 text-white shadow"
+                          : "bg-white hover:bg-green-50 text-gray-700 "
+                      }`}
+                    >
+                      {item.icon}
+                      <span className="ml-3">{item.name}</span>
+                    </Button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
 
+        {/* Contenido principal */}
+        <div
+          className={`flex-1 overflow-y-auto bg-gradient-to-br from-green-50 to-emerald-50 p-8 ${
+            activeSection === "ia" ? "col-span-2" : ""
+          }`}
+        >
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeSection}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+            >
+              {renderContent()}
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      </div>
 
       {/* Modal Agregar/Editar Producto */}
       <AnimatePresence>
         {showAddProduct && (
-          <motion.div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowAddProduct(false)}>
-            <motion.div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
-              initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.8, opacity: 0 }}
-              transition={{ duration: 0.3 }} onClick={(e) => e.stopPropagation()}>
+          <motion.div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowAddProduct(false)}
+          >
+            <motion.div
+              className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="p-8">
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-bold text-gray-900">{editingProductId == null ? 'Agregar Nuevo Producto' : 'Editar Producto'}</h2>
-                  <Button variant="ghost" size="sm" onClick={() => setShowAddProduct(false)}><X className="h-5 w-5" /></Button>
+                  <h2 className="text-2xl font-bold text-gray-900">
+                    {editingProductId == null
+                      ? "Agregar Nuevo Producto"
+                      : "Editar Producto"}
+                  </h2>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowAddProduct(false)}
+                  >
+                    <X className="h-5 w-5" />
+                  </Button>
                 </div>
                 <form onSubmit={handleSaveProduct} className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <Label htmlFor="name">Nombre *</Label>
-                      <Input id="name" value={productForm.name} onChange={(e) => setProductForm({ ...productForm, name: e.target.value })} required />
+                      <Input
+                        id="name"
+                        value={productForm.name}
+                        onChange={(e) =>
+                          setProductForm({
+                            ...productForm,
+                            name: e.target.value,
+                          })
+                        }
+                        required
+                      />
                     </div>
                     <div>
                       <Label htmlFor="category">Categoría *</Label>
@@ -1713,7 +2116,9 @@ const handleAddToCart = (product: ProductUI): void => {
                           setProductForm({ ...productForm, category: value })
                         }
                       >
-                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="frutas">Frutas</SelectItem>
                           <SelectItem value="verduras">Verduras</SelectItem>
@@ -1721,34 +2126,141 @@ const handleAddToCart = (product: ProductUI): void => {
                           <SelectItem value="otros">Otros</SelectItem>
                         </SelectContent>
                       </Select>
-
                     </div>
                   </div>
                   <div>
                     <Label htmlFor="description">Descripción *</Label>
-                    <Textarea id="description" value={productForm.description} onChange={(e) => setProductForm({ ...productForm, description: e.target.value })} required />
+                    <Textarea
+                      id="description"
+                      value={productForm.description}
+                      onChange={(e) =>
+                        setProductForm({
+                          ...productForm,
+                          description: e.target.value,
+                        })
+                      }
+                      required
+                    />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div>
                       <Label htmlFor="price">Precio *</Label>
-                      <Input id="price" type="number" value={productForm.price} onChange={(e) => setProductForm({ ...productForm, price: e.target.value })} required />
+                      <Input
+                        id="price"
+                        type="number"
+                        value={productForm.price}
+                        onChange={(e) =>
+                          setProductForm({
+                            ...productForm,
+                            price: e.target.value,
+                          })
+                        }
+                        required
+                      />
                     </div>
                     <div>
                       <Label htmlFor="unit">Unidad *</Label>
-                      <Input id="unit" value={productForm.unit} onChange={(e) => setProductForm({ ...productForm, unit: e.target.value })} required />
+                      <Input
+                        id="unit"
+                        value={productForm.unit}
+                        onChange={(e) =>
+                          setProductForm({
+                            ...productForm,
+                            unit: e.target.value,
+                          })
+                        }
+                        required
+                      />
                     </div>
                     <div>
                       <Label htmlFor="stock">Reserva *</Label>
-                      <Input id="stock" type="number" value={productForm.stock} onChange={(e) => setProductForm({ ...productForm, stock: e.target.value })} required />
+                      <Input
+                        id="stock"
+                        type="number"
+                        value={productForm.stock}
+                        onChange={(e) =>
+                          setProductForm({
+                            ...productForm,
+                            stock: e.target.value,
+                          })
+                        }
+                        required
+                      />
                     </div>
                   </div>
                   <div>
-                    <Label htmlFor="image">URL de Imagen</Label>
-                    <Input id="image" value={productForm.image} onChange={(e) => setProductForm({ ...productForm, image: e.target.value })} />
+                    <Label htmlFor="image">Imagen del Producto</Label>
+                    <div className="space-y-3">
+                      <Input
+                        id="imageFile"
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            // Validar tamaño (máximo 5MB)
+                            if (file.size > 5 * 1024 * 1024) {
+                              alert.error('Error', 'La imagen no debe superar 5MB');
+                              return;
+                            }
+                            
+                            // Convertir a base64
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                              setProductForm({
+                                ...productForm,
+                                image: reader.result as string,
+                              });
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                        className="cursor-pointer"
+                      />
+                      
+                      {/* Vista previa de la imagen */}
+                      {productForm.image && (
+                        <div className="relative w-full h-40 border rounded-lg overflow-hidden bg-gray-50">
+                          <img
+                            src={productForm.image}
+                            alt="Vista previa"
+                            className="w-full h-full object-cover"
+                          />
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            className="absolute top-2 right-2"
+                            onClick={() => setProductForm({ ...productForm, image: '' })}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
+                      
+                      <p className="text-xs text-gray-500">
+                        Formatos: JPG, PNG, GIF. Tamaño máximo: 5MB
+                      </p>
+                    </div>
                   </div>
                   <div className="flex gap-4">
-                    <Button type="button" variant="outline" className="flex-1" onClick={() => setShowAddProduct(false)}>Cancelar</Button>
-                    <Button type="submit" className="flex-1 bg-green-500 hover:bg-green-600"><Save className="h-4 w-4 mr-2" />{editingProductId == null ? 'Guardar Producto' : 'Guardar Cambios'}</Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => setShowAddProduct(false)}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      type="submit"
+                      className="flex-1 bg-green-500 hover:bg-green-600"
+                    >
+                      <Save className="h-4 w-4 mr-2" />
+                      {editingProductId == null
+                        ? "Guardar Producto"
+                        : "Guardar Cambios"}
+                    </Button>
                   </div>
                 </form>
               </div>
@@ -1760,61 +2272,173 @@ const handleAddToCart = (product: ProductUI): void => {
       {/* Modal Crear/Editar Bitácora (unico modal) */}
       <AnimatePresence>
         {showAddBitacora && (
-          <motion.div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowAddBitacora(false)}>
-            <motion.div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
-              initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.8, opacity: 0 }}
-              transition={{ duration: 0.3 }} onClick={(e) => e.stopPropagation()}>
+          <motion.div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowAddBitacora(false)}
+          >
+            <motion.div
+              className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="p-8">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-2xl font-bold text-gray-900">
-                    {editingEntryId != null ? 'Editar Bitácora' : 'Nueva Entrada de Bitácora'}
+                    {editingEntryId != null
+                      ? "Editar Bitácora"
+                      : "Nueva Entrada de Bitácora"}
                   </h2>
-                  <Button variant="ghost" size="sm" onClick={() => setShowAddBitacora(false)}><X className="h-5 w-5" /></Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowAddBitacora(false)}
+                  >
+                    <X className="h-5 w-5" />
+                  </Button>
                 </div>
                 <form onSubmit={handleAddBitacora} className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <Label htmlFor="tipoActividad">Tipo de Actividad *</Label>
-                      <Input id="tipoActividad" value={bitacoraForm.tipoActividad} onChange={(e) => setBitacoraForm({ ...bitacoraForm, tipoActividad: e.target.value })} required />
+                      <Input
+                        id="tipoActividad"
+                        value={bitacoraForm.tipoActividad}
+                        onChange={(e) =>
+                          setBitacoraForm({
+                            ...bitacoraForm,
+                            tipoActividad: e.target.value,
+                          })
+                        }
+                        required
+                      />
                     </div>
                     <div>
                       <Label htmlFor="tipoCultivo">Tipo de Cultivo *</Label>
-                      <Input id="tipoCultivo" value={bitacoraForm.tipoCultivo} onChange={(e) => setBitacoraForm({ ...bitacoraForm, tipoCultivo: e.target.value })} required />
+                      <Input
+                        id="tipoCultivo"
+                        value={bitacoraForm.tipoCultivo}
+                        onChange={(e) =>
+                          setBitacoraForm({
+                            ...bitacoraForm,
+                            tipoCultivo: e.target.value,
+                          })
+                        }
+                        required
+                      />
                     </div>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <Label htmlFor="fechaInicio">Fecha de Inicio *</Label>
-                      <Input id="fechaInicio" type="date" value={bitacoraForm.fechaInicio} onChange={(e) => setBitacoraForm({ ...bitacoraForm, fechaInicio: e.target.value })} required />
+                      <Input
+                        id="fechaInicio"
+                        type="date"
+                        value={bitacoraForm.fechaInicio}
+                        onChange={(e) =>
+                          setBitacoraForm({
+                            ...bitacoraForm,
+                            fechaInicio: e.target.value,
+                          })
+                        }
+                        required
+                      />
                     </div>
                     <div>
                       <Label htmlFor="fechaFin">Fecha de Fin *</Label>
-                      <Input id="fechaFin" type="date" value={bitacoraForm.fechaFin} onChange={(e) => setBitacoraForm({ ...bitacoraForm, fechaFin: e.target.value })} required />
+                      <Input
+                        id="fechaFin"
+                        type="date"
+                        value={bitacoraForm.fechaFin}
+                        onChange={(e) =>
+                          setBitacoraForm({
+                            ...bitacoraForm,
+                            fechaFin: e.target.value,
+                          })
+                        }
+                        required
+                      />
                     </div>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <Label htmlFor="lote">Lote *</Label>
-                      <Input id="lote" value={bitacoraForm.lote} onChange={(e) => setBitacoraForm({ ...bitacoraForm, lote: e.target.value })} required />
+                      <Input
+                        id="lote"
+                        value={bitacoraForm.lote}
+                        onChange={(e) =>
+                          setBitacoraForm({
+                            ...bitacoraForm,
+                            lote: e.target.value,
+                          })
+                        }
+                        required
+                      />
                     </div>
                     <div>
                       <Label htmlFor="cantidad">Cantidad *</Label>
-                      <Input id="cantidad" value={bitacoraForm.cantidad} onChange={(e) => setBitacoraForm({ ...bitacoraForm, cantidad: e.target.value })} required />
+                      <Input
+                        id="cantidad"
+                        value={bitacoraForm.cantidad}
+                        onChange={(e) =>
+                          setBitacoraForm({
+                            ...bitacoraForm,
+                            cantidad: e.target.value,
+                          })
+                        }
+                        required
+                      />
                     </div>
                   </div>
                   <div>
                     <Label htmlFor="detalle">Detalle de la Actividad *</Label>
-                    <Textarea id="detalle" value={bitacoraForm.detalle} onChange={(e) => setBitacoraForm({ ...bitacoraForm, detalle: e.target.value })} required />
+                    <Textarea
+                      id="detalle"
+                      value={bitacoraForm.detalle}
+                      onChange={(e) =>
+                        setBitacoraForm({
+                          ...bitacoraForm,
+                          detalle: e.target.value,
+                        })
+                      }
+                      required
+                    />
                   </div>
                   <div>
                     <Label htmlFor="observaciones">Observaciones</Label>
-                    <Textarea id="observaciones" value={bitacoraForm.observaciones} onChange={(e) => setBitacoraForm({ ...bitacoraForm, observaciones: e.target.value })} />
+                    <Textarea
+                      id="observaciones"
+                      value={bitacoraForm.observaciones}
+                      onChange={(e) =>
+                        setBitacoraForm({
+                          ...bitacoraForm,
+                          observaciones: e.target.value,
+                        })
+                      }
+                    />
                   </div>
                   <div className="flex gap-4">
-                    <Button type="button" variant="outline" className="flex-1" onClick={() => setShowAddBitacora(false)}>Cancelar</Button>
-                    <Button type="submit" className="flex-1 bg-green-500 hover:bg-green-600">
-                      <Save className="h-4 w-4 mr-2" />{editingEntryId != null ? 'Guardar Cambios' : 'Guardar Entrada'}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => setShowAddBitacora(false)}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      type="submit"
+                      className="flex-1 bg-green-500 hover:bg-green-600"
+                    >
+                      <Save className="h-4 w-4 mr-2" />
+                      {editingEntryId != null
+                        ? "Guardar Cambios"
+                        : "Guardar Entrada"}
                     </Button>
                   </div>
                 </form>
@@ -1827,38 +2451,153 @@ const handleAddToCart = (product: ProductUI): void => {
       {/* Modal Agregar Cultivo */}
       <AnimatePresence>
         {showAddCultivo && (
-          <motion.div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowAddCultivo(false)}>
-            <motion.div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
-              initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.8, opacity: 0 }}
-              transition={{ duration: 0.3 }} onClick={(e) => e.stopPropagation()}>
+          <motion.div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowAddCultivo(false)}
+          >
+            <motion.div
+              className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="p-8">
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-bold text-gray-900">{editingCultivoId == null ? 'Agregar Nuevo Cultivo' : 'Editar Cultivo'}</h2>
-                  <Button variant="ghost" size="sm" onClick={() => setShowAddCultivo(false)}><X className="h-5 w-5" /></Button>
+                  <h2 className="text-2xl font-bold text-gray-900">
+                    {editingCultivoId == null
+                      ? "Agregar Nuevo Cultivo"
+                      : "Editar Cultivo"}
+                  </h2>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowAddCultivo(false)}
+                  >
+                    <X className="h-5 w-5" />
+                  </Button>
                 </div>
                 <form onSubmit={handleSaveCultivo} className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <Label htmlFor="cultivoName">Nombre del Cultivo *</Label>
-                      <Input id="cultivoName" value={cultivoForm.name} onChange={(e) => setCultivoForm({ ...cultivoForm, name: e.target.value })} required />
+                      <Input
+                        id="cultivoName"
+                        value={cultivoForm.name}
+                        onChange={(e) =>
+                          setCultivoForm({
+                            ...cultivoForm,
+                            name: e.target.value,
+                          })
+                        }
+                        required
+                      />
                     </div>
                     <div>
                       <Label htmlFor="variedad">Variedad *</Label>
-                      <Input id="variedad" value={cultivoForm.variedad} onChange={(e) => setCultivoForm({ ...cultivoForm, variedad: e.target.value })} required />
+                      <Input
+                        id="variedad"
+                        value={cultivoForm.variedad}
+                        onChange={(e) =>
+                          setCultivoForm({
+                            ...cultivoForm,
+                            variedad: e.target.value,
+                          })
+                        }
+                        required
+                      />
                     </div>
                   </div>
                   <div>
                     <Label htmlFor="cultivoComentario">Comentario</Label>
-                    <Textarea id="cultivoComentario" value={cultivoForm.comentario} onChange={(e) => setCultivoForm({ ...cultivoForm, comentario: e.target.value })} />
+                    <Textarea
+                      id="cultivoComentario"
+                      value={cultivoForm.comentario}
+                      onChange={(e) =>
+                        setCultivoForm({
+                          ...cultivoForm,
+                          comentario: e.target.value,
+                        })
+                      }
+                    />
                   </div>
                   <div>
-                    <Label htmlFor="cultivoImage">URL de Imagen</Label>
-                    <Input id="cultivoImage" value={cultivoForm.image} onChange={(e) => setCultivoForm({ ...cultivoForm, image: e.target.value })} />
+                    <Label htmlFor="cultivoImage">Imagen del Cultivo</Label>
+                    <div className="space-y-3">
+                      <Input
+                        id="cultivoImageFile"
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            // Validar tamaño (máximo 5MB)
+                            if (file.size > 5 * 1024 * 1024) {
+                              alert.error('Error', 'La imagen no debe superar 5MB');
+                              return;
+                            }
+                            
+                            // Convertir a base64
+                            const reader = new FileReader();
+                            reader.onloadend = () => {
+                              setCultivoForm({
+                                ...cultivoForm,
+                                image: reader.result as string,
+                              });
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        }}
+                        className="cursor-pointer"
+                      />
+                      
+                      {/* Vista previa de la imagen */}
+                      {cultivoForm.image && (
+                        <div className="relative w-full h-40 border rounded-lg overflow-hidden bg-gray-50">
+                          <img
+                            src={cultivoForm.image}
+                            alt="Vista previa"
+                            className="w-full h-full object-cover"
+                          />
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            className="absolute top-2 right-2"
+                            onClick={() => setCultivoForm({ ...cultivoForm, image: '' })}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
+                      
+                      <p className="text-xs text-gray-500">
+                        Formatos: JPG, PNG, GIF. Tamaño máximo: 5MB
+                      </p>
+                    </div>
                   </div>
                   <div className="flex gap-4">
-                    <Button type="button" variant="outline" className="flex-1" onClick={() => setShowAddCultivo(false)}>Cancelar</Button>
-                    <Button type="submit" className="flex-1 bg-green-500 hover:bg-green-600"><Save className="h-4 w-4 mr-2" />{editingCultivoId == null ? 'Guardar Cultivo' : 'Guardar Cambios'}</Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => setShowAddCultivo(false)}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      type="submit"
+                      className="flex-1 bg-green-500 hover:bg-green-600"
+                    >
+                      <Save className="h-4 w-4 mr-2" />
+                      {editingCultivoId == null
+                        ? "Guardar Cultivo"
+                        : "Guardar Cambios"}
+                    </Button>
                   </div>
                 </form>
               </div>
@@ -1872,55 +2611,91 @@ const handleAddToCart = (product: ProductUI): void => {
         {showVetModal && (
           <motion.div
             className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             onClick={() => setShowVetModal(null)}
           >
             <motion.div
               className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
-              initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.98, opacity: 0 }}
-              transition={{ duration: 0.25 }} onClick={(e) => e.stopPropagation()}
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.98, opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              onClick={(e) => e.stopPropagation()}
             >
               <div className="p-8">
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-bold text-gray-900">Agro Veterinaria</h2>
-                  <Button variant="ghost" size="sm" onClick={() => setShowVetModal(null)}>
+                  <h2 className="text-2xl font-bold text-gray-900">
+                    Agro Veterinaria
+                  </h2>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowVetModal(null)}
+                  >
                     <X className="h-5 w-5" />
                   </Button>
                 </div>
 
                 <div className="flex items-center gap-4 mb-6">
                   <img
-                    src={showVetModal.image || 'https://images.pexels.com/photos/5327585/pexels-photo-5327585.jpeg'}
+                    src={
+                      showVetModal.image ||
+                      "https://images.pexels.com/photos/5327585/pexels-photo-5327585.jpeg"
+                    }
                     className="w-20 h-20 rounded-lg object-cover"
                     alt={showVetModal.name}
                   />
                   <div>
-                    <h3 className="text-xl font-bold text-gray-900">{showVetModal.name}</h3>
+                    <h3 className="text-xl font-bold text-gray-900">
+                      {showVetModal.name}
+                    </h3>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <Label>Nombre</Label>
-                    <Input value={showVetModal.name} readOnly className="bg-gray-50" />
+                    <Input
+                      value={showVetModal.name}
+                      readOnly
+                      className="bg-gray-50"
+                    />
                   </div>
                   <div>
                     <Label>Email</Label>
-                    <Input value={showVetModal.email} readOnly className="bg-gray-50" />
+                    <Input
+                      value={showVetModal.email}
+                      readOnly
+                      className="bg-gray-50"
+                    />
                   </div>
                   <div>
                     <Label>Teléfono</Label>
-                    <Input value={showVetModal.phone} readOnly className="bg-gray-50" />
+                    <Input
+                      value={showVetModal.phone}
+                      readOnly
+                      className="bg-gray-50"
+                    />
                   </div>
                   <div>
                     <Label>Ubicación</Label>
-                    <Input value={showVetModal.location} readOnly className="bg-gray-50" />
+                    <Input
+                      value={showVetModal.location}
+                      readOnly
+                      className="bg-gray-50"
+                    />
                   </div>
                 </div>
 
                 <div className="mt-6">
                   <Label>Dirección Exacta</Label>
-                  <Textarea value={showVetModal.address || ''} readOnly className="bg-gray-50" />
+                  <Textarea
+                    value={showVetModal.address || ""}
+                    readOnly
+                    className="bg-gray-50"
+                  />
                 </div>
               </div>
             </motion.div>
@@ -1929,261 +2704,440 @@ const handleAddToCart = (product: ProductUI): void => {
       </AnimatePresence>
 
       {/*Modal que me muestra los productos en el marketplace, igual que en el dashboard del cliente*/}
-       <AnimatePresence>
-  {selectedProduct && (
-    <motion.div
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      onClick={() => setSelectedProduct(null)}
-    >
-      <motion.div
-        className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
-        initial={{ scale: 0.8, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.8, opacity: 0 }}
-        transition={{ duration: 0.3 }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="relative">
-          <img src={selectedProduct.image} alt={selectedProduct.name} className="w-full h-80 object-cover" />
-          <button
+      <AnimatePresence>
+        {selectedProduct && (
+          <motion.div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             onClick={() => setSelectedProduct(null)}
-            className="absolute top-4 right-4 bg-white/90 hover:bg-white text-gray-700 p-2 rounded-full shadow-lg transition-all duration-300 hover:scale-110"
           >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        <div className="p-8">
-          <div className="mb-6">
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">{selectedProduct.name}</h2>
-            <p className="text-gray-600 mb-4">{selectedProduct.description}</p>
-            <div className="flex items-center space-x-4 text-sm text-gray-500">
-              <span>Productor: {farmerNameOf(selectedProduct)}</span>
-              <span>•</span>
-              <span>Ubicación: {farmerLocationOf(selectedProduct)}</span>
-              <span>•</span>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <span className="text-3xl font-bold text-green-600">₡{selectedProduct.price.toLocaleString()}</span>
-              <span className="text-gray-500 ml-2">/{selectedProduct.unit}</span>
-            </div>
-
-            <div className="flex items-center space-x-3">
-              <Button variant="outline" size="sm" onClick={() => setProductQuantity(Math.max(1, productQuantity - 1))} disabled={productQuantity <= 1}>
-                <Minus className="h-4 w-4" />
-              </Button>
-              <span className="text-xl font-semibold w-12 text-center">{productQuantity}</span>
-              <Button variant="outline" size="sm" onClick={() => setProductQuantity(productQuantity + 1)} disabled={productQuantity >= selectedProduct.stock}>
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-
-          <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-            <div className="flex justify-between items-center">
-              <span className="text-lg font-semibold text-gray-700">Total:</span>
-              <span className="text-2xl font-bold text-green-600">₡{(selectedProduct.price * productQuantity).toLocaleString()}</span>
-            </div>
-          </div>
-
-          <div className="flex space-x-4">
-            <Button
-              className="w-full bg-green-600 hover:bg-green-700 text-white py-3"
-              onClick={() => handleBuyNow(selectedProduct)}
-              disabled={adding}
+            <motion.div
+              className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              onClick={(e) => e.stopPropagation()}
             >
-              <ShoppingCart className="mr-2 h-5 w-5" />
-              {adding ? 'Agregando…' : 'Comprar Ahora'}
-            </Button>
-            <Button
-              variant="outline"
-              className="flex-1 border-blue-200 hover:bg-blue-50 text-blue-700 py-3"
-              onClick={() => handleAddToCart(selectedProduct)}
-            >
-              <Plus className="mr-2 h-5 w-5" />
-              Agregar al Carrito
-            </Button>
-          </div>
-        </div>
-      </motion.div>
-    </motion.div>
-  )}
-</AnimatePresence>
-
-<AnimatePresence>
-  {showCart && (
-    <motion.div
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      onClick={() => setShowCart(false)}
-    >
-      <motion.div
-        className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
-        initial={{ scale: 0.8, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.8, opacity: 0 }}
-        transition={{ duration: 0.3 }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="p-8">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-3xl font-bold text-gray-900">Carrito de Compras 🛒</h2>
-            <button onClick={() => setShowCart(false)} className="bg-gray-100 hover:bg-gray-200 text-gray-700 p-2 rounded-full">
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-
-          {cart.length === 0 ? (
-            <div className="text-center py-12">
-              <Package className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-              <p className="text-xl text-gray-500 mb-4">Tu carrito está vacío</p>
-              <Button onClick={() => setShowCart(false)} className="bg-blue-500 hover:bg-blue-600 text-white">
-                Continuar Comprando
-              </Button>
-            </div>
-          ) : (
-            <>
-              <div className="space-y-4 mb-8">
-                {cart.map(item => (
-                  <motion.div key={item.id} className="flex items-center space-x-4 p-4 bg-gray-50 rounded-xl" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
-                    <img src={item.image} alt={item.name} className="w-20 h-20 object-cover rounded-lg" />
-                    <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-gray-900">{item.name}</h3>
-                      <p className="text-sm text-gray-500">Por: {farmerNameOf(item)} • {farmerLocationOf(item)}</p>
-                      <p className="text-lg font-bold text-green-600">₡{item.price.toLocaleString()} /{item.unit}</p>
-                    </div>
-
-                    <div className="flex items-center space-x-3">
-                      <Button variant="outline" size="sm" onClick={() => updateCartQuantity(item.id, item.quantity - 1)}>
-                        <Minus className="h-4 w-4" />
-                      </Button>
-                      <span className="text-lg font-semibold w-12 text-center">{item.quantity}</span>
-                      <Button variant="outline" size="sm" onClick={() => updateCartQuantity(item.id, item.quantity + 1)}>
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    </div>
-
-                    <div className="text-right">
-                      <p className="text-lg font-bold text-gray-900">₡{(item.price * item.quantity).toLocaleString()}</p>
-                      <Button variant="ghost" size="sm" onClick={() => removeFromCart(item.id)} className="text-red-600 hover:text-red-700 hover:bg-red-50">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </motion.div>
-                ))}
+              <div className="relative">
+                <img
+                  src={selectedProduct.image}
+                  alt={selectedProduct.name}
+                  className="w-full h-80 object-cover"
+                />
+                <button
+                  onClick={() => setSelectedProduct(null)}
+                  className="absolute top-4 right-4 bg-white/90 hover:bg-white text-gray-700 p-2 rounded-full shadow-lg transition-all duration-300 hover:scale-110"
+                >
+                  <X className="h-5 w-5" />
+                </button>
               </div>
 
-              <div className="border-t border-gray-200 pt-6">
-                <div className="space-y-3 mb-6">
-                  <div className="flex justify-between text-lg">
-                    <span className="text-gray-600">Subtotal:</span>
-                    <span className="font-semibold">₡{getSubtotal().toLocaleString()}</span>
+              <div className="p-8">
+                <div className="mb-6">
+                  <h2 className="text-3xl font-bold text-gray-900 mb-2">
+                    {selectedProduct.name}
+                  </h2>
+                  <p className="text-gray-600 mb-4">
+                    {selectedProduct.description}
+                  </p>
+                  <div className="flex items-center space-x-4 text-sm text-gray-500">
+                    <span>Productor: {farmerNameOf(selectedProduct)}</span>
+                    <span>•</span>
+                    <span>Ubicación: {farmerLocationOf(selectedProduct)}</span>
+                    <span>•</span>
                   </div>
-                  <div className="flex justify-between text-lg">
-                    <span className="text-gray-600">IVA (13%):</span>
-                    <span className="font-semibold">₡{getIVA().toLocaleString()}</span>
+                </div>
+
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <span className="text-3xl font-bold text-green-600">
+                      ₡{selectedProduct.price.toLocaleString()}
+                    </span>
+                    <span className="text-gray-500 ml-2">
+                      /{selectedProduct.unit}
+                    </span>
                   </div>
-                  <div className="flex justify-between text-2xl font-bold border-t border-gray-200 pt-3">
-                    <span className="text-gray-900">Total:</span>
-                    <span className="text-green-600">₡{getTotal().toLocaleString()}</span>
+
+                  <div className="flex items-center space-x-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setProductQuantity(Math.max(1, productQuantity - 1))
+                      }
+                      disabled={productQuantity <= 1}
+                    >
+                      <Minus className="h-4 w-4" />
+                    </Button>
+                    <span className="text-xl font-semibold w-12 text-center">
+                      {productQuantity}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setProductQuantity(productQuantity + 1)}
+                      disabled={productQuantity >= selectedProduct.stock}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                  <div className="flex justify-between items-center">
+                    <span className="text-lg font-semibold text-gray-700">
+                      Total:
+                    </span>
+                    <span className="text-2xl font-bold text-green-600">
+                      ₡
+                      {(
+                        selectedProduct.price * productQuantity
+                      ).toLocaleString()}
+                    </span>
                   </div>
                 </div>
 
                 <div className="flex space-x-4">
-                  <Button variant="outline" className="flex-1 border-gray-300 hover:bg-gray-50" onClick={() => setShowCart(false)}>
-                    <ArrowLeft className="mr-2 h-5 w-5" />
-                    Continuar Comprando
-                  </Button>
                   <Button
-                    className="flex-1 bg-green-600 hover:bg-green-700 text-white py-3"
-                    disabled={finalizing || cart.length === 0}
-                    onClick={async () => {
-                      if (finalizing) return;
-                      setFinalizing(true);
-                      try {
-                        const me = AuthService.getCurrentUser();
-                        if (!me?.id) {
-                          toast.error('Debes iniciar sesión para comprar');
-                          setFinalizing(false);
-                          return;
-                        }
-                        for (const item of cart) {
-                          await OrderService.createOrder({
-                            productId: item.id,
-                            customerId: me.id,
-                            quantity: item.quantity,
-                            notes: 'Compra finalizada desde carrito (agricultor)',
-                          });
-                        }
-                        toast.success('¡Compra realizada con éxito!');
-                        setCart([]);
-                        setShowCart(false);
-                      } catch (err) {
-                        console.error(err);
-                        toast.error('No se pudo completar la compra');
-                      } finally {
-                        setFinalizing(false);
-                      }
-                    }}
+                    className="w-full bg-green-600 hover:bg-green-700 text-white py-3"
+                    onClick={() => handleBuyNow(selectedProduct)}
+                    disabled={adding}
                   >
                     <ShoppingCart className="mr-2 h-5 w-5" />
-                    {finalizing ? 'Procesando…' : 'Finalizar Compra'}
+                    {adding ? "Agregando…" : "Comprar Ahora"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1 border-blue-200 hover:bg-blue-50 text-blue-700 py-3"
+                    onClick={() => handleAddToCart(selectedProduct)}
+                  >
+                    <Plus className="mr-2 h-5 w-5" />
+                    Agregar al Carrito
                   </Button>
                 </div>
               </div>
-            </>
-          )}
-        </div>
-      </motion.div>
-    </motion.div>
-  )}
-</AnimatePresence>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
+      <AnimatePresence>
+        {showCart && (
+          <motion.div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowCart(false)}
+          >
+            <motion.div
+              className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-8">
+                <div className="flex items-center justify-between mb-8">
+                  <h2 className="text-3xl font-bold text-gray-900">
+                    Carrito de Compras 🛒
+                  </h2>
+                  <button
+                    onClick={() => setShowCart(false)}
+                    className="bg-gray-100 hover:bg-gray-200 text-gray-700 p-2 rounded-full"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
 
+                {cart.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Package className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                    <p className="text-xl text-gray-500 mb-4">
+                      Tu carrito está vacío
+                    </p>
+                    <Button
+                      onClick={() => setShowCart(false)}
+                      className="bg-blue-500 hover:bg-blue-600 text-white"
+                    >
+                      Continuar Comprando
+                    </Button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="space-y-4 mb-8">
+                      {cart.map((item) => (
+                        <motion.div
+                          key={item.id}
+                          className="flex items-center space-x-4 p-4 bg-gray-50 rounded-xl"
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                        >
+                          <img
+                            src={item.image}
+                            alt={item.name}
+                            className="w-20 h-20 object-cover rounded-lg"
+                          />
+                          <div className="flex-1">
+                            <h3 className="text-lg font-semibold text-gray-900">
+                              {item.name}
+                            </h3>
+                            <p className="text-sm text-gray-500">
+                              Por: {farmerNameOf(item)} •{" "}
+                              {farmerLocationOf(item)}
+                            </p>
+                            <p className="text-lg font-bold text-green-600">
+                              ₡{item.price.toLocaleString()} /{item.unit}
+                            </p>
+                          </div>
+
+                          <div className="flex items-center space-x-3">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() =>
+                                updateCartQuantity(item.id, item.quantity - 1)
+                              }
+                            >
+                              <Minus className="h-4 w-4" />
+                            </Button>
+                            <span className="text-lg font-semibold w-12 text-center">
+                              {item.quantity}
+                            </span>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() =>
+                                updateCartQuantity(item.id, item.quantity + 1)
+                              }
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </div>
+
+                          <div className="text-right">
+                            <p className="text-lg font-bold text-gray-900">
+                              ₡{(item.price * item.quantity).toLocaleString()}
+                            </p>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeFromCart(item.id)}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+
+                    <div className="border-t border-gray-200 pt-6">
+                      <div className="space-y-3 mb-6">
+                        <div className="flex justify-between text-lg">
+                          <span className="text-gray-600">Subtotal:</span>
+                          <span className="font-semibold">
+                            ₡{getSubtotal().toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-lg">
+                          <span className="text-gray-600">IVA (13%):</span>
+                          <span className="font-semibold">
+                            ₡{getIVA().toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-2xl font-bold border-t border-gray-200 pt-3">
+                          <span className="text-gray-900">Total:</span>
+                          <span className="text-green-600">
+                            ₡{getTotal().toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex space-x-4">
+                        <Button
+                          variant="outline"
+                          className="flex-1 border-gray-300 hover:bg-gray-50"
+                          onClick={() => setShowCart(false)}
+                        >
+                          <ArrowLeft className="mr-2 h-5 w-5" />
+                          Continuar Comprando
+                        </Button>
+                        <Button
+                          className="flex-1 bg-green-600 hover:bg-green-700 text-white py-3"
+                          disabled={finalizing || cart.length === 0}
+                          onClick={async () => {
+                            if (finalizing) return;
+
+                            // SweetAlert de confirmación
+                            const confirmed = await alert.confirm(
+                              "¿Confirmar compra?",
+                              `Se procesarán ${cart.length} producto(s) por un total de ₡${getTotal().toLocaleString()}`
+                            );
+
+                            if (!confirmed) return;
+
+                            setFinalizing(true);
+                            try {
+                              const me = AuthService.getCurrentUser();
+                              if (!me?.id) {
+                                alert.error(
+                                  "Error",
+                                  "Debes iniciar sesión para comprar"
+                                );
+                                setFinalizing(false);
+                                return;
+                              }
+                              for (const item of cart) {
+                                await OrderService.createOrder({
+                                  productId: item.id,
+                                  customerId: me.id,
+                                  quantity: item.quantity,
+                                  notes:
+                                    "Compra finalizada desde carrito (agricultor)",
+                                });
+                              }
+                              alert.success(
+                                "¡Compra realizada!",
+                                "Tu pedido ha sido procesado."
+                              );
+                              setCart([]);
+                              setShowCart(false);
+                            } catch (err) {
+                              console.error(err);
+                              alert.error(
+                                "Error",
+                                "No se pudo completar la compra"
+                              );
+                            } finally {
+                              setFinalizing(false);
+                            }
+                          }}
+                        >
+                          <ShoppingCart className="mr-2 h-5 w-5" />
+                          {finalizing ? "Procesando…" : "Finalizar Compra"}
+                        </Button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Modal Agregar, Editar Propiedad */}
       <AnimatePresence>
         {showAddPropiedad && (
-          <motion.div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowAddPropiedad(false)}>
-            <motion.div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
-              initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.8, opacity: 0 }}
-              transition={{ duration: 0.3 }} onClick={(e) => e.stopPropagation()}>
+          <motion.div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowAddPropiedad(false)}
+          >
+            <motion.div
+              className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="p-8">
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-bold text-gray-900">Agregar Nueva Propiedad</h2>
-                  <Button variant="ghost" size="sm" onClick={() => setShowAddPropiedad(false)}><X className="h-5 w-5" /></Button>
+                  <h2 className="text-2xl font-bold text-gray-900">
+                    Agregar Nueva Propiedad
+                  </h2>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowAddPropiedad(false)}
+                  >
+                    <X className="h-5 w-5" />
+                  </Button>
                 </div>
                 <form onSubmit={handleAddPropiedad} className="space-y-6">
                   <div>
-                    <Label htmlFor="propiedadNombre">Nombre de la Propiedad *</Label>
-                    <Input id="propiedadNombre" value={propiedadForm.nombre} onChange={(e) => setPropiedadForm({ ...propiedadForm, nombre: e.target.value })} required />
+                    <Label htmlFor="propiedadNombre">
+                      Nombre de la Propiedad *
+                    </Label>
+                    <Input
+                      id="propiedadNombre"
+                      value={propiedadForm.nombre}
+                      onChange={(e) =>
+                        setPropiedadForm({
+                          ...propiedadForm,
+                          nombre: e.target.value,
+                        })
+                      }
+                      required
+                    />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <Label htmlFor="localizacion">Localización *</Label>
-                      <Input id="localizacion" value={propiedadForm.localizacion} onChange={(e) => setPropiedadForm({ ...propiedadForm, localizacion: e.target.value })} required />
+                      <Input
+                        id="localizacion"
+                        value={propiedadForm.localizacion}
+                        onChange={(e) =>
+                          setPropiedadForm({
+                            ...propiedadForm,
+                            localizacion: e.target.value,
+                          })
+                        }
+                        required
+                      />
                     </div>
                     <div>
                       <Label htmlFor="tamano">Tamaño *</Label>
-                      <Input id="tamano" value={propiedadForm.tamano} onChange={(e) => setPropiedadForm({ ...propiedadForm, tamano: e.target.value })} required />
+                      <Input
+                        id="tamano"
+                        value={propiedadForm.tamano}
+                        onChange={(e) =>
+                          setPropiedadForm({
+                            ...propiedadForm,
+                            tamano: e.target.value,
+                          })
+                        }
+                        required
+                      />
                     </div>
                   </div>
                   <div>
                     <Label htmlFor="propiedadComentario">Comentario</Label>
-                    <Textarea id="propiedadComentario" value={propiedadForm.comentario} onChange={(e) => setPropiedadForm({ ...propiedadForm, comentario: e.target.value })} />
+                    <Textarea
+                      id="propiedadComentario"
+                      value={propiedadForm.comentario}
+                      onChange={(e) =>
+                        setPropiedadForm({
+                          ...propiedadForm,
+                          comentario: e.target.value,
+                        })
+                      }
+                    />
                   </div>
                   <div className="flex gap-4">
-                    <Button type="button" variant="outline" className="flex-1" onClick={() => setShowAddPropiedad(false)}>Cancelar</Button>
-                    <Button type="submit" className="flex-1 bg-green-500 hover:bg-green-600"><Save className="h-4 w-4 mr-2" />Guardar Propiedad</Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => setShowAddPropiedad(false)}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      type="submit"
+                      className="flex-1 bg-green-500 hover:bg-green-600"
+                    >
+                      <Save className="h-4 w-4 mr-2" />
+                      Guardar Propiedad
+                    </Button>
                   </div>
                 </form>
               </div>
@@ -2196,18 +3150,31 @@ const handleAddToCart = (product: ProductUI): void => {
         {showEditPropiedad && (
           <motion.div
             className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             onClick={() => setShowEditPropiedad(null)}
           >
             <motion.div
               className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
-              initial={{ scale: 0.92, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.98, opacity: 0 }}
-              transition={{ duration: 0.25 }} onClick={(e) => e.stopPropagation()}
+              initial={{ scale: 0.92, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.98, opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              onClick={(e) => e.stopPropagation()}
             >
               <div className="p-8">
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-bold text-gray-900">Editar Propiedad</h2>
-                  <Button variant="ghost" size="sm" onClick={() => setShowEditPropiedad(null)}><X className="h-5 w-5" /></Button>
+                  <h2 className="text-2xl font-bold text-gray-900">
+                    Editar Propiedad
+                  </h2>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowEditPropiedad(null)}
+                  >
+                    <X className="h-5 w-5" />
+                  </Button>
                 </div>
 
                 <form onSubmit={handleSavePropiedad} className="space-y-6">
@@ -2215,7 +3182,12 @@ const handleAddToCart = (product: ProductUI): void => {
                     <Label>Nombre *</Label>
                     <Input
                       value={propiedadEditForm.nombre}
-                      onChange={(e) => setPropiedadEditForm({ ...propiedadEditForm, nombre: e.target.value })}
+                      onChange={(e) =>
+                        setPropiedadEditForm({
+                          ...propiedadEditForm,
+                          nombre: e.target.value,
+                        })
+                      }
                       required
                     />
                   </div>
@@ -2224,7 +3196,12 @@ const handleAddToCart = (product: ProductUI): void => {
                       <Label>Localización *</Label>
                       <Input
                         value={propiedadEditForm.localizacion}
-                        onChange={(e) => setPropiedadEditForm({ ...propiedadEditForm, localizacion: e.target.value })}
+                        onChange={(e) =>
+                          setPropiedadEditForm({
+                            ...propiedadEditForm,
+                            localizacion: e.target.value,
+                          })
+                        }
                         required
                       />
                     </div>
@@ -2232,7 +3209,12 @@ const handleAddToCart = (product: ProductUI): void => {
                       <Label>Tamaño *</Label>
                       <Input
                         value={propiedadEditForm.tamano}
-                        onChange={(e) => setPropiedadEditForm({ ...propiedadEditForm, tamano: e.target.value })}
+                        onChange={(e) =>
+                          setPropiedadEditForm({
+                            ...propiedadEditForm,
+                            tamano: e.target.value,
+                          })
+                        }
                         required
                       />
                     </div>
@@ -2241,15 +3223,28 @@ const handleAddToCart = (product: ProductUI): void => {
                     <Label>Comentario</Label>
                     <Textarea
                       value={propiedadEditForm.comentario}
-                      onChange={(e) => setPropiedadEditForm({ ...propiedadEditForm, comentario: e.target.value })}
+                      onChange={(e) =>
+                        setPropiedadEditForm({
+                          ...propiedadEditForm,
+                          comentario: e.target.value,
+                        })
+                      }
                     />
                   </div>
 
                   <div className="flex gap-4">
-                    <Button type="button" variant="outline" className="flex-1" onClick={() => setShowEditPropiedad(null)}>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => setShowEditPropiedad(null)}
+                    >
                       Cancelar
                     </Button>
-                    <Button type="submit" className="flex-1 bg-green-600 hover:bg-green-700">
+                    <Button
+                      type="submit"
+                      className="flex-1 bg-green-600 hover:bg-green-700"
+                    >
                       <Save className="h-4 w-4 mr-2" /> Guardar Cambios
                     </Button>
                   </div>
@@ -2259,7 +3254,6 @@ const handleAddToCart = (product: ProductUI): void => {
           </motion.div>
         )}
       </AnimatePresence>
-
     </div>
   );
 }
