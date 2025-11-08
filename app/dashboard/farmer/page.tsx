@@ -35,6 +35,8 @@ import { ProductCategory, ProductStatus } from '@/app/types/product';
 import { OrderService } from '@/services/order.service';
 import type { Order as OrderApi } from '@/lib/api';
 import { VetShopService } from '@/services/vetshop.service';
+import Swal from 'sweetalert2';
+import { getCultivoImageUrl } from '@/lib/image-utils';
 
 import { AIAssistant } from '@/components/ui/ai-assistant';
 
@@ -228,6 +230,7 @@ const [isCommercialOpen, setIsCommercialOpen] = useState(true);
   const [cultivoForm, setCultivoForm] = useState({
     name: '', variedad: '', comentario: '', image: ''
   });
+  const [cultivoImageFile, setCultivoImageFile] = useState<File | null>(null);
   const [propiedadForm, setPropiedadForm] = useState({
     nombre: '', localizacion: '', tamano: '', comentario: ''
   });
@@ -338,10 +341,27 @@ const [isCommercialOpen, setIsCommercialOpen] = useState(true);
   };
 
   const handleToggleCultivo = async (id: number, currentActive?: boolean) => {
+    const cultivo = cultivos.find(c => c.id === id);
+    const action = currentActive ? 'desactivar' : 'activar';
+
+    const result = await Swal.fire({
+      title: `¿${action.charAt(0).toUpperCase() + action.slice(1)} cultivo?`,
+      text: `El cultivo "${cultivo?.name ?? ''}" será ${action === 'activar' ? 'activado' : 'desactivado'}`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: currentActive ? '#ef4444' : '#10b981',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: `Sí, ${action}`,
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (!result.isConfirmed) return;
+
     // optimista: refleja el cambio al instante
     setCultivos(prev => prev.map(c => c.id === id ? { ...c, active: !c.active } : c));
     try {
       await CultivoService.toggleActiveCultivo(id);
+      toast.success(`Cultivo ${action === 'activar' ? 'activado' : 'desactivado'}`);
     } catch (err) {
       // revierte si falla
       setCultivos(prev => prev.map(c => c.id === id ? { ...c, active: currentActive ?? c.active } : c));
@@ -422,40 +442,52 @@ const [isCommercialOpen, setIsCommercialOpen] = useState(true);
 
   // Después de crear, recarga (o inserta optimista)
   // UPDATE — crear propiedad: añade al estado o recarga
-  const handleAddPropiedad = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!propiedadForm.nombre || !propiedadForm.localizacion || !propiedadForm.tamano) {
-      toast.error('Por favor completa los campos requeridos');
-      return;
-    }
-    try {
-      const created = await PropiedadService.createPropiedad({
-        nombre: propiedadForm.nombre,
-        localizacion: propiedadForm.localizacion,
-        tamano: propiedadForm.tamano,
-        comentario: propiedadForm.comentario || undefined,
-        farmerId: currentUser?.id ?? 1
-      });
+const handleAddPropiedad = async (e: React.FormEvent) => {
+  e.preventDefault();
 
-      // Normaliza y agrega optimista
-      const normalized = {
-        ...created,
-        active: typeof created.active === 'boolean' ? created.active : !!Number(created.active),
-      };
-      setPropiedades(prev => [normalized, ...prev]);
+  if (!propiedadForm.nombre || !propiedadForm.localizacion || !propiedadForm.tamano) {
+    toast.error('Por favor completa los campos requeridos');
+    return;
+  }
 
-      toast.success('Propiedad agregada exitosamente');
-      setShowAddPropiedad(false);
-      setPropiedadForm({ nombre: '', localizacion: '', tamano: '', comentario: '' });
+  try {
+    // ✅ toma el id del token (payload.sub)
+    const me = AuthService.getCurrentUser();
+    const farmerId = Number(me?.id);
 
-      // Re-sync (por si el backend ajusta algo)
-      await loadPropiedades();
-    } catch (error) {
-      console.error('Error adding propiedad:', error);
-      toast.error('Error al agregar propiedad');
-    }
-  };
+    // Construye el payload. Si hay farmerId numérico, lo mandamos; si no, lo omitimos.
+    const payload: {
+      nombre: string;
+      localizacion: string;
+      tamano: string;
+      comentario?: string;
+      farmerId?: number;   // <-- opcional en el payload
+    } = {
+      nombre: propiedadForm.nombre,
+      localizacion: propiedadForm.localizacion,
+      tamano: propiedadForm.tamano,
+      comentario: propiedadForm.comentario || undefined,
+      ...(Number.isFinite(farmerId) ? { farmerId } : {}),  // <-- solo si existe
+    };
 
+    const created = await PropiedadService.createPropiedad(payload);
+
+    const normalized = {
+      ...created,
+      active: typeof created.active === 'boolean' ? created.active : !!Number(created.active),
+    };
+    setPropiedades(prev => [normalized, ...prev]);
+
+    toast.success('Propiedad agregada exitosamente');
+    setShowAddPropiedad(false);
+    setPropiedadForm({ nombre: '', localizacion: '', tamano: '', comentario: '' });
+
+    await loadPropiedades();
+  } catch (error) {
+    console.error('Error adding propiedad:', error);
+    toast.error('Error al agregar propiedad');
+  }
+};
   // NUEVO — abrir modal de edición
   const handleOpenEditPropiedad = (p: Propiedad) => {
     setShowEditPropiedad(p);
@@ -491,10 +523,27 @@ const [isCommercialOpen, setIsCommercialOpen] = useState(true);
 
   // NUEVO — activar/desactivar
   const handleTogglePropiedad = async (id: number, currentActive?: boolean) => {
+    const propiedad = propiedades.find(p => p.id === id);
+    const action = currentActive ? 'desactivar' : 'activar';
+
+    const result = await Swal.fire({
+      title: `¿${action.charAt(0).toUpperCase() + action.slice(1)} propiedad?`,
+      text: `La propiedad "${propiedad?.nombre ?? ''}" será ${action === 'activar' ? 'activada' : 'desactivada'}`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: currentActive ? '#ef4444' : '#10b981',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: `Sí, ${action}`,
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (!result.isConfirmed) return;
+
     // optimista
     setPropiedades(prev => prev.map(p => p.id === id ? ({ ...p, active: !p.active }) : p));
     try {
       await PropiedadService.toggleActivePropiedad(id);
+      toast.success(`Propiedad ${action === 'activar' ? 'activada' : 'desactivada'}`);
     } catch (e) {
       // revertir si falla
       setPropiedades(prev => prev.map(p => p.id === id ? ({ ...p, active: currentActive ?? p.active }) : p));
@@ -663,8 +712,18 @@ const [isCommercialOpen, setIsCommercialOpen] = useState(true);
 
   // Eliminar
   const handleDeleteProduct = async (id: number, name?: string) => {
-    const ok = window.confirm(`¿Eliminar "${name ?? 'este producto'}"?`);
-    if (!ok) return;
+    const result = await Swal.fire({
+      title: '¿Estás seguro?',
+      text: `Se eliminará el producto "${name ?? 'este producto'}" permanentemente`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (!result.isConfirmed) return;
 
     // 1) Estado previo para revertir si falla
     const prev = myProducts;
@@ -756,8 +815,18 @@ const [isCommercialOpen, setIsCommercialOpen] = useState(true);
 
   // Elimina por id (una sola función)
   const handleDeleteBitacora = async (id: number) => {
-    const ok = window.confirm('¿Eliminar esta entrada de la bitácora?');
-    if (!ok) return;
+    const result = await Swal.fire({
+      title: '¿Eliminar entrada?',
+      text: 'Esta entrada de la bitácora se eliminará permanentemente',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (!result.isConfirmed) return;
 
     const prev = bitacoraEntries;
     setBitacoraEntries((list) => list.filter((e) => e.id !== id)); // optimista
@@ -781,17 +850,24 @@ const [isCommercialOpen, setIsCommercialOpen] = useState(true);
       return;
     }
 
+    if (!currentUser?.id) {
+      toast.error('No se pudo obtener el ID del usuario');
+      return;
+    }
+
     try {
       const created = await CultivoService.createCultivo({
         name: cultivoForm.name,
         variedad: cultivoForm.variedad,
         comentario: cultivoForm.comentario || undefined,
-        image: cultivoForm.image || undefined,
+        image: cultivoImageFile,
+        farmerId: currentUser.id,
       });
 
       toast.success('Cultivo agregado exitosamente');
       setShowAddCultivo(false);
       setCultivoForm({ name: '', variedad: '', comentario: '', image: '' });
+      setCultivoImageFile(null);
 
       // Si el backend devuelve el objeto creado:
       if (created && created.id) {
@@ -833,24 +909,43 @@ const [isCommercialOpen, setIsCommercialOpen] = useState(true);
       return;
     }
 
-    try {
-      const payload = {
-        name: cultivoForm.name,
-        variedad: cultivoForm.variedad,
-        comentario: cultivoForm.comentario || undefined,
-        image: cultivoForm.image || undefined,
-      };
+    if (!currentUser?.id) {
+      toast.error('No se pudo obtener el ID del usuario');
+      return;
+    }
 
+    try {
       if (editingCultivoId == null) {
-        await CultivoService.createCultivo(payload);
+        // Crear nuevo cultivo
+        await CultivoService.createCultivo({
+          name: cultivoForm.name,
+          variedad: cultivoForm.variedad,
+          comentario: cultivoForm.comentario || undefined,
+          image: cultivoImageFile,
+          farmerId: currentUser.id,
+        });
         toast.success('Cultivo creado');
       } else {
+        // Actualizar cultivo existente
+        const payload: any = {
+          name: cultivoForm.name,
+          variedad: cultivoForm.variedad,
+          comentario: cultivoForm.comentario || undefined,
+        };
+
+        // Solo incluir la imagen si se seleccionó un nuevo archivo
+        if (cultivoImageFile) {
+          payload.image = cultivoImageFile;
+        }
+
         await CultivoService.updateCultivo(editingCultivoId, payload);
         toast.success('Cultivo actualizado');
       }
 
       setShowAddCultivo(false);
       setEditingCultivoId(null);
+      setCultivoForm({ name: '', variedad: '', comentario: '', image: '' });
+      setCultivoImageFile(null);
       await loadCultivos();
     } catch (err) {
       console.error('Error guardando cultivo:', err);
@@ -860,8 +955,19 @@ const [isCommercialOpen, setIsCommercialOpen] = useState(true);
 
   // Eliminar
   const handleDeleteCultivo = async (id: number, name?: string) => {
-    const ok = window.confirm(`¿Eliminar "${name ?? 'este cultivo'}"?`);
-    if (!ok) return;
+    const result = await Swal.fire({
+      title: '¿Eliminar cultivo?',
+      text: `El cultivo "${name ?? 'este cultivo'}" se eliminará permanentemente`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (!result.isConfirmed) return;
+
     try {
       await CultivoService.deleteCultivo(id);
       toast.success('Cultivo eliminado');
@@ -942,7 +1048,7 @@ const handleAddToCart = (product: ProductUI): void => {
   const renderMarketplace = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-3xl font-bold text-gray-900">Marketplace Agrícola 🛒</h2>
+        <h2 className="text-3xl font-bold text-gray-900">Mercado agrícola 🛒</h2>
       </div>
 
       <div className="flex flex-col md:flex-row gap-4 mb-6">
@@ -1096,7 +1202,7 @@ const handleAddToCart = (product: ProductUI): void => {
               <h3 className="text-lg font-bold text-gray-900 mb-2">{product.name}</h3>
               <div className="space-y-2 mb-4">
                 <p className="text-sm text-gray-600">Precio: ₡{product.price.toLocaleString()}/{product.unit}</p>
-                <p className="text-sm text-gray-600">Stock: {product.stock} {product.unit}s</p>
+                <p className="text-sm text-gray-600">Reserva: {product.stock} {product.unit}s</p>
               </div>
             </CardContent>
 
@@ -1371,9 +1477,12 @@ const handleAddToCart = (product: ProductUI): void => {
           <Card key={c.id} className="flex flex-col overflow-hidden hover:shadow-lg transition-shadow">
             <div className="relative h-56 w-full">
               <img
-                src={c.image || 'https://images.pexels.com/photos/1458694/pexels-photo-1458694.jpeg'}
+                src={getCultivoImageUrl(c.image) || 'https://images.pexels.com/photos/1458694/pexels-photo-1458694.jpeg'}
                 alt={c.name}
                 className="h-full w-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.src = 'https://images.pexels.com/photos/1458694/pexels-photo-1458694.jpeg';
+                }}
               />
               <div className="absolute top-3 right-3">
                 <Badge className={`${c.active ? 'bg-green-500' : 'bg-red-500'} text-white`}>
@@ -1511,7 +1620,7 @@ const handleAddToCart = (product: ProductUI): void => {
               <div className="bg-gradient-to-r from-green-500 to-blue-500 p-2 rounded-xl"><Leaf className="h-8 w-8 text-white" /></div>
               <div>
                 <h1 className="text-2xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">AgroGlobal</h1>
-                <p className="text-sm text-black-500">Dashboard Agricultor  🎑</p>
+                <p className="text-sm text-black-500">Mercado de agricultor  🎑</p>
               </div>
             </motion.div>
             <div className="flex items-center space-x-4">
@@ -1623,7 +1732,7 @@ const handleAddToCart = (product: ProductUI): void => {
           className="ml-6 mt-2 space-y-1 overflow-hidden"
         >
           {[
-            { id: "marketplace", name: "Marketplace", icon: <ShoppingCart className="h-5 w-5" /> },
+            { id: "marketplace", name: "Mercado", icon: <ShoppingCart className="h-5 w-5" /> },
             { id: "ofertas", name: "Mis Ofertas", icon: <Package className="h-5 w-5" /> },
             { id: "tienda", name: "Tienda", icon: <Store className="h-5 w-5" /> },
             { id: "ordenes", name: "Órdenes", icon: <ClipboardList className="h-5 w-5" /> },
@@ -1725,7 +1834,7 @@ const handleAddToCart = (product: ProductUI): void => {
                       <Input id="unit" value={productForm.unit} onChange={(e) => setProductForm({ ...productForm, unit: e.target.value })} required />
                     </div>
                     <div>
-                      <Label htmlFor="stock">Stock *</Label>
+                      <Label htmlFor="stock">Reserva *</Label>
                       <Input id="stock" type="number" value={productForm.stock} onChange={(e) => setProductForm({ ...productForm, stock: e.target.value })} required />
                     </div>
                   </div>
@@ -1840,8 +1949,23 @@ const handleAddToCart = (product: ProductUI): void => {
                     <Textarea id="cultivoComentario" value={cultivoForm.comentario} onChange={(e) => setCultivoForm({ ...cultivoForm, comentario: e.target.value })} />
                   </div>
                   <div>
-                    <Label htmlFor="cultivoImage">URL de Imagen</Label>
-                    <Input id="cultivoImage" value={cultivoForm.image} onChange={(e) => setCultivoForm({ ...cultivoForm, image: e.target.value })} />
+                    <Label htmlFor="cultivoImage">Imagen del Cultivo</Label>
+                    <Input
+                      id="cultivoImage"
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setCultivoImageFile(file);
+                        }
+                      }}
+                    />
+                    {cultivoImageFile && (
+                      <p className="text-sm text-green-600 mt-2">
+                        Archivo seleccionado: {cultivoImageFile.name}
+                      </p>
+                    )}
                   </div>
                   <div className="flex gap-4">
                     <Button type="button" variant="outline" className="flex-1" onClick={() => setShowAddCultivo(false)}>Cancelar</Button>

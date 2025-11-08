@@ -83,6 +83,7 @@ export default function FarmerAuth() {
     setIsLoading(true);
 
     try {
+
       if (isLogin) {
         try {
           // Normalizar email y password
