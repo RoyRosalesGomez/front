@@ -2200,24 +2200,54 @@ export default function FarmerDashboard() {
                           if (file) {
                             // Validar tamaño (máximo 5MB)
                             if (file.size > 5 * 1024 * 1024) {
-                              alert.error('Error', 'La imagen no debe superar 5MB');
+                              alert.error(
+                                "Error",
+                                "La imagen no debe superar 5MB"
+                              );
                               return;
                             }
-                            
-                            // Convertir a base64
+
+                            // Comprimir y convertir a base64
                             const reader = new FileReader();
                             reader.onloadend = () => {
-                              setProductForm({
-                                ...productForm,
-                                image: reader.result as string,
-                              });
+                              const img = new Image();
+                              img.onload = () => {
+                                const canvas = document.createElement('canvas');
+                                const ctx = canvas.getContext('2d');
+                                
+                                // Redimensionar a máximo 800x800 manteniendo aspecto
+                                let width = img.width;
+                                let height = img.height;
+                                const maxSize = 800;
+                                
+                                if (width > height && width > maxSize) {
+                                  height = (height * maxSize) / width;
+                                  width = maxSize;
+                                } else if (height > maxSize) {
+                                  width = (width * maxSize) / height;
+                                  height = maxSize;
+                                }
+                                
+                                canvas.width = width;
+                                canvas.height = height;
+                                ctx?.drawImage(img, 0, 0, width, height);
+                                
+                                // Convertir a JPEG con calidad 0.7 (70%)
+                                const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+                                
+                                setProductForm({
+                                  ...productForm,
+                                  image: compressedBase64,
+                                });
+                              };
+                              img.src = reader.result as string;
                             };
                             reader.readAsDataURL(file);
                           }
                         }}
                         className="cursor-pointer"
                       />
-                      
+
                       {/* Vista previa de la imagen */}
                       {productForm.image && (
                         <div className="relative w-full h-40 border rounded-lg overflow-hidden bg-gray-50">
@@ -2231,13 +2261,15 @@ export default function FarmerDashboard() {
                             variant="destructive"
                             size="sm"
                             className="absolute top-2 right-2"
-                            onClick={() => setProductForm({ ...productForm, image: '' })}
+                            onClick={() =>
+                              setProductForm({ ...productForm, image: "" })
+                            }
                           >
                             <X className="h-4 w-4" />
                           </Button>
                         </div>
                       )}
-                      
+
                       <p className="text-xs text-gray-500">
                         Formatos: JPG, PNG, GIF. Tamaño máximo: 5MB
                       </p>
@@ -2537,24 +2569,54 @@ export default function FarmerDashboard() {
                           if (file) {
                             // Validar tamaño (máximo 5MB)
                             if (file.size > 5 * 1024 * 1024) {
-                              alert.error('Error', 'La imagen no debe superar 5MB');
+                              alert.error(
+                                "Error",
+                                "La imagen no debe superar 5MB"
+                              );
                               return;
                             }
-                            
-                            // Convertir a base64
+
+                            // Comprimir y convertir a base64
                             const reader = new FileReader();
                             reader.onloadend = () => {
-                              setCultivoForm({
-                                ...cultivoForm,
-                                image: reader.result as string,
-                              });
+                              const img = new Image();
+                              img.onload = () => {
+                                const canvas = document.createElement('canvas');
+                                const ctx = canvas.getContext('2d');
+                                
+                                // Redimensionar a máximo 800x800 manteniendo aspecto
+                                let width = img.width;
+                                let height = img.height;
+                                const maxSize = 800;
+                                
+                                if (width > height && width > maxSize) {
+                                  height = (height * maxSize) / width;
+                                  width = maxSize;
+                                } else if (height > maxSize) {
+                                  width = (width * maxSize) / height;
+                                  height = maxSize;
+                                }
+                                
+                                canvas.width = width;
+                                canvas.height = height;
+                                ctx?.drawImage(img, 0, 0, width, height);
+                                
+                                // Convertir a JPEG con calidad 0.7 (70%)
+                                const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+                                
+                                setCultivoForm({
+                                  ...cultivoForm,
+                                  image: compressedBase64,
+                                });
+                              };
+                              img.src = reader.result as string;
                             };
                             reader.readAsDataURL(file);
                           }
                         }}
                         className="cursor-pointer"
                       />
-                      
+
                       {/* Vista previa de la imagen */}
                       {cultivoForm.image && (
                         <div className="relative w-full h-40 border rounded-lg overflow-hidden bg-gray-50">
@@ -2568,13 +2630,15 @@ export default function FarmerDashboard() {
                             variant="destructive"
                             size="sm"
                             className="absolute top-2 right-2"
-                            onClick={() => setCultivoForm({ ...cultivoForm, image: '' })}
+                            onClick={() =>
+                              setCultivoForm({ ...cultivoForm, image: "" })
+                            }
                           >
                             <X className="h-4 w-4" />
                           </Button>
                         </div>
                       )}
-                      
+
                       <p className="text-xs text-gray-500">
                         Formatos: JPG, PNG, GIF. Tamaño máximo: 5MB
                       </p>
