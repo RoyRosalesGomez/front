@@ -1,26 +1,19 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { 
-  Tractor, 
-  ArrowLeft, 
-  ArrowRight,
-  Leaf
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { Tractor, ArrowLeft, ArrowRight, Leaf } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 
 export default function FarmerWelcome() {
-  // Instrumentation to help diagnose 500 error on /auth/farmer
-  console.log('[FarmerWelcome] page component loaded');
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-green-100">
       {/* Header */}
       <header className="bg-white/95 backdrop-blur-sm shadow-lg sticky top-0 z-40">
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            <motion.div 
+            <motion.div
               className="flex items-center space-x-3"
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -33,16 +26,16 @@ export default function FarmerWelcome() {
                 AgroGlobal
               </h1>
             </motion.div>
-            
+
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
             >
-              <Button 
+              <Button
                 variant="outline"
                 className="border-green-200 hover:bg-green-50 text-green-700"
-                onClick={() => window.location.href = '/dashboard-select'}
+                onClick={() => (window.location.href = "/dashboard-select")}
               >
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Atrás
@@ -62,38 +55,41 @@ export default function FarmerWelcome() {
           >
             <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-2xl">
               <CardContent className="p-12">
-                <motion.div 
+                <motion.div
                   className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-gradient-to-r from-green-500 to-emerald-500 text-white mb-8"
                   whileHover={{ scale: 1.1, rotate: 360 }}
                   transition={{ duration: 0.6 }}
                 >
                   <Tractor className="h-12 w-12" />
                 </motion.div>
-                
+
                 <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
                   Bienvenido al Sector Agricultor
                 </h2>
-                
+
                 <p className="text-xl text-gray-600 mb-8 leading-relaxed">
-                  Gestiona tus cultivos, productos y conecta directamente con compradores 
-                  a través de nuestra plataforma especializada para agricultores.
+                  Gestiona tus cultivos, productos y conecta directamente con
+                  compradores a través de nuestra plataforma especializada para
+                  agricultores.
                 </p>
 
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <Button 
+                  <Button
                     variant="outline"
                     size="lg"
                     className="px-8 py-3 text-lg border-gray-300 hover:bg-gray-50"
-                    onClick={() => window.location.href = '/dashboard-select'}
+                    onClick={() => (window.location.href = "/dashboard-select")}
                   >
                     <ArrowLeft className="mr-2 h-5 w-5" />
                     Atrás
                   </Button>
-                  
-                  <Button 
+
+                  <Button
                     size="lg"
                     className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white px-8 py-3 text-lg rounded-full shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
-                    onClick={() => window.location.href = '/auth/farmer/login'}
+                    onClick={() =>
+                      (window.location.href = "/auth/farmer/login")
+                    }
                   >
                     Ir
                     <ArrowRight className="ml-2 h-5 w-5" />

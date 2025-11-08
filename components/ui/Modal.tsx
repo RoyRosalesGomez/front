@@ -18,7 +18,14 @@ const sizeMap: Record<string, string> = {
   lg: "max-w-2xl",
 };
 
-export function Modal({ open, onOpenChange, title, description, children, size = "md" }: ModalProps) {
+export function Modal({
+  open,
+  onOpenChange,
+  title,
+  description,
+  children,
+  size = "md",
+}: ModalProps) {
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>

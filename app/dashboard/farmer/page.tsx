@@ -2212,14 +2212,14 @@ export default function FarmerDashboard() {
                             reader.onloadend = () => {
                               const img = new Image();
                               img.onload = () => {
-                                const canvas = document.createElement('canvas');
-                                const ctx = canvas.getContext('2d');
-                                
+                                const canvas = document.createElement("canvas");
+                                const ctx = canvas.getContext("2d");
+
                                 // Redimensionar a máximo 800x800 manteniendo aspecto
                                 let width = img.width;
                                 let height = img.height;
                                 const maxSize = 800;
-                                
+
                                 if (width > height && width > maxSize) {
                                   height = (height * maxSize) / width;
                                   width = maxSize;
@@ -2227,14 +2227,17 @@ export default function FarmerDashboard() {
                                   width = (width * maxSize) / height;
                                   height = maxSize;
                                 }
-                                
+
                                 canvas.width = width;
                                 canvas.height = height;
                                 ctx?.drawImage(img, 0, 0, width, height);
-                                
+
                                 // Convertir a JPEG con calidad 0.7 (70%)
-                                const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
-                                
+                                const compressedBase64 = canvas.toDataURL(
+                                  "image/jpeg",
+                                  0.7
+                                );
+
                                 setProductForm({
                                   ...productForm,
                                   image: compressedBase64,
@@ -2581,14 +2584,14 @@ export default function FarmerDashboard() {
                             reader.onloadend = () => {
                               const img = new Image();
                               img.onload = () => {
-                                const canvas = document.createElement('canvas');
-                                const ctx = canvas.getContext('2d');
-                                
+                                const canvas = document.createElement("canvas");
+                                const ctx = canvas.getContext("2d");
+
                                 // Redimensionar a máximo 800x800 manteniendo aspecto
                                 let width = img.width;
                                 let height = img.height;
                                 const maxSize = 800;
-                                
+
                                 if (width > height && width > maxSize) {
                                   height = (height * maxSize) / width;
                                   width = maxSize;
@@ -2596,14 +2599,17 @@ export default function FarmerDashboard() {
                                   width = (width * maxSize) / height;
                                   height = maxSize;
                                 }
-                                
+
                                 canvas.width = width;
                                 canvas.height = height;
                                 ctx?.drawImage(img, 0, 0, width, height);
-                                
+
                                 // Convertir a JPEG con calidad 0.7 (70%)
-                                const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
-                                
+                                const compressedBase64 = canvas.toDataURL(
+                                  "image/jpeg",
+                                  0.7
+                                );
+
                                 setCultivoForm({
                                   ...cultivoForm,
                                   image: compressedBase64,
