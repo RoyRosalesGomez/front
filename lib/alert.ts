@@ -29,7 +29,6 @@ export const alert = {
       showCancelButton: true,
       confirmButtonText: "Sí",
       cancelButtonText: "No",
-      reverseButtons: true,
     });
     return res.isConfirmed;
   },

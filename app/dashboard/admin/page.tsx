@@ -1646,15 +1646,64 @@ const loadActivities = async () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="image">URL de Imagen</Label>
+                    <Label htmlFor="vetshop-image">Imagen del Local</Label>
                     <Input
-                      id="image"
-                      type="url"
-                      placeholder="https://ejemplo.com/logo.jpg"
-                      value={vetShopForm.image}
-                      onChange={(e) => setVetShopForm({ ...vetShopForm, image: e.target.value })}
+                      id="vetshop-image"
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          const img = new Image();
+                          img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            const maxSize = 800;
+                            let width = img.width;
+                            let height = img.height;
+
+                            if (width > height && width > maxSize) {
+                              height = (height * maxSize) / width;
+                              width = maxSize;
+                            } else if (height > maxSize) {
+                              width = (width * maxSize) / height;
+                              height = maxSize;
+                            }
+
+                            canvas.width = width;
+                            canvas.height = height;
+
+                            const ctx = canvas.getContext('2d');
+                            if (ctx) {
+                              ctx.drawImage(img, 0, 0, width, height);
+                              const compressed = canvas.toDataURL('image/jpeg', 0.7);
+                              setVetShopForm({ ...vetShopForm, image: compressed });
+                            }
+                          };
+                          img.src = reader.result as string;
+                        };
+                        reader.readAsDataURL(file);
+                      }}
                       className="border-gray-200"
                     />
+                    {vetShopForm.image && (
+                      <div className="relative mt-2">
+                        <img
+                          src={vetShopForm.image}
+                          alt="Vista previa"
+                          className="w-full h-48 object-cover rounded-lg"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setVetShopForm({ ...vetShopForm, image: '' })}
+                          className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    )}
                   </div>
 
 
@@ -1772,6 +1821,67 @@ const loadActivities = async () => {
                 <div className="mt-6">
                   <Label>Dirección Exacta</Label>
                   <Textarea value={editVetForm.address} onChange={(e) => setEditVetForm({ ...editVetForm, address: e.target.value })} />
+                </div>
+
+                <div className="mt-6 space-y-2">
+                  <Label htmlFor="edit-vetshop-image">Imagen del Local</Label>
+                  <Input
+                    id="edit-vetshop-image"
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+
+                      const reader = new FileReader();
+                      reader.onloadend = () => {
+                        const img = new Image();
+                        img.onload = () => {
+                          const canvas = document.createElement('canvas');
+                          const maxSize = 800;
+                          let width = img.width;
+                          let height = img.height;
+
+                          if (width > height && width > maxSize) {
+                            height = (height * maxSize) / width;
+                            width = maxSize;
+                          } else if (height > maxSize) {
+                            width = (width * maxSize) / height;
+                            height = maxSize;
+                          }
+
+                          canvas.width = width;
+                          canvas.height = height;
+
+                          const ctx = canvas.getContext('2d');
+                          if (ctx) {
+                            ctx.drawImage(img, 0, 0, width, height);
+                            const compressed = canvas.toDataURL('image/jpeg', 0.7);
+                            setEditVetForm({ ...editVetForm, image: compressed });
+                          }
+                        };
+                        img.src = reader.result as string;
+                      };
+                      reader.readAsDataURL(file);
+                    }}
+                    className="border-gray-200"
+                  />
+                  {editVetForm.image && (
+                    <div className="relative mt-2">
+                      <img
+                        src={editVetForm.image}
+                        alt="Vista previa"
+                        className="w-full h-48 object-cover rounded-lg"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setEditVetForm({ ...editVetForm, image: '' })}
+                        className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 <div className="mt-6">
