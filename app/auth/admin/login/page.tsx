@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { AuthService } from '@/services/auth.service';
 import { toast } from 'sonner';
+import { alert } from '@/lib/alert';
 
 
 export default function AdminAuth() {
@@ -51,18 +52,19 @@ async function handleSubmit(e: React.FormEvent) {
         formData.password
       );
       // si llega aquí, hay token y user en localStorage
-      router.push('/dashboard/admin');
+  alert.success('Bienvenido', 'Accediendo al panel de administración');
+  router.push('/dashboard/admin');
       return;
     }
 
     // ------- REGISTRO (primer admin si no existe) -------
     // validaciones básicas
     if (formData.password.length < 6) {
-      toast.error('La contraseña debe tener al menos 6 caracteres.');
+      alert.error('Contraseña inválida', 'Debe tener al menos 6 caracteres.');
       return;
     }
     if (formData.password !== formData.confirmPassword) {
-      toast.error('Las contraseñas no coinciden.');
+      alert.error('Error de validación', 'Las contraseñas no coinciden.');
       return;
     }
 
@@ -86,14 +88,14 @@ async function handleSubmit(e: React.FormEvent) {
     }
 
     // En cualquier otro caso, queda PENDING (sin token)
-    toast.success('Usuario registrado. Quedará PENDIENTE hasta que un admin lo active.');
+  alert.info('Registro realizado', 'Quedará PENDIENTE hasta que un admin lo active.');
     setIsLogin(true);    // o al mismo admin auth con isLogin=true
   } catch (err: any) {
     const msg = String(err?.message || '');
     if (msg.includes('Credenciales inválidas') || msg.includes('401')) {
-      toast.error('Correo o contraseña incorrectos.');
+      alert.error('Credenciales inválidas', 'Correo o contraseña incorrectos.');
     } else {
-      toast.error(msg || 'No se pudo contactar el servidor.');
+      alert.error('Error', msg || 'No se pudo contactar el servidor.');
     }
   } finally {
     setIsLoading(false);

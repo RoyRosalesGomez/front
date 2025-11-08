@@ -22,6 +22,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { AuthService } from '@/services/auth.service';
 import { toast } from 'sonner';
+import { alert } from '@/lib/alert';
 
 export default function FarmerAuth() {
   const [isLogin, setIsLogin] = useState(true);
@@ -66,26 +67,25 @@ export default function FarmerAuth() {
           
           // Verificar que sea agricultor
           if (response.user.role !== 'farmer') {
-            toast.error('Acceso denegado. Esta sección es solo para agricultores.');
+            alert.error('Acceso denegado', 'Esta sección es solo para agricultores.');
             return;
           }
 
           // Verificar que la cuenta esté activa
           if (response.user.status !== 'active') {
-            toast.error('Tu cuenta está pendiente de activación por el administrador. Por favor espera a que activen tu cuenta.');
+            alert.info('Cuenta pendiente', 'Un administrador debe activar tu cuenta.');
             return;
           }
-
-          toast.success(`¡Bienvenido ${response.user.name}!`);
+          alert.success('Bienvenido', response.user.name);
           window.location.href = '/dashboard/farmer';
         } catch (error: any) {
           console.error('Error en login:', error);
-          toast.error(error.message || 'Error al iniciar sesión. Verifica tus credenciales.');
+          alert.error('Error al iniciar sesión', error.message || 'Verifica tus credenciales.');
         }
       } else {
         // Validar contraseñas
         if (formData.password !== formData.confirmPassword) {
-          toast.error('Las contraseñas no coinciden');
+          alert.error('Error de validación', 'Las contraseñas no coinciden');
           return;
         }
 
@@ -102,10 +102,10 @@ export default function FarmerAuth() {
             role: 'farmer'
           });
 
-          toast.success('¡Cuenta creada exitosamente! Tu cuenta está pendiente de activación por el administrador.');
+          alert.success('Cuenta creada', 'Pendiente de activación por un administrador.');
         } catch (error: any) {
           console.error('Error en registro:', error);
-          toast.error(error.message || 'Error al crear la cuenta. Intenta nuevamente.');
+          alert.error('Error en registro', error.message || 'Intenta nuevamente.');
         }
         
         setIsLogin(true);
@@ -122,7 +122,7 @@ export default function FarmerAuth() {
       }
     } catch (error: any) {
       console.error('Error en autenticación:', error);
-      toast.error('Error de conexión. Verifica que el backend esté ejecutándose.');
+      alert.error('Error de conexión', 'Verifica que el backend esté ejecutándose.');
     } finally {
       setIsLoading(false);
     }
