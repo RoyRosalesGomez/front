@@ -12,6 +12,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 
 export default function FarmerWelcome() {
+  // Instrumentation to help diagnose 500 error on /auth/farmer
+  console.log('[FarmerWelcome] page component loaded');
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-green-100">
       {/* Header */}
