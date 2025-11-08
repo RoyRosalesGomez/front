@@ -125,7 +125,7 @@ if (!response.ok) {
         method: 'POST',
         body: JSON.stringify(credentials),
       }),
-    
+
     register: (userData: {
       name: string;
       lastName?: string;
@@ -139,6 +139,18 @@ if (!response.ok) {
       this.request('/auth/register', {
         method: 'POST',
         body: JSON.stringify(userData),
+      }),
+
+    forgotPassword: (email: string) =>
+      this.request('/auth/forgot-password', {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      }),
+
+    resetPassword: (data: { email: string; password: string; confirmPassword: string }) =>
+      this.request('/auth/reset-password', {
+        method: 'POST',
+        body: JSON.stringify(data),
       }),
   };
 

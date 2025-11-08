@@ -7,7 +7,7 @@ export class AuthService {
 static async login(email: string, password: string) {
   try {
     const emailT = (email ?? '').trim();
-    const passwordT = (password ?? '').trim();
+    const passwordT = password ?? ''; // NO hacer trim a la password
 
     console.log('[LOGIN] Enviando a backend:', { email: emailT, hasPassword: !!passwordT });
 
@@ -99,4 +99,24 @@ static async login(email: string, password: string) {
     return false;
   }
 }
+
+  static async forgotPassword(email: string) {
+    try {
+      const response = await api.auth.forgotPassword(email);
+      return response;
+    } catch (error) {
+      console.error('Error en AuthService.forgotPassword:', error);
+      throw error;
+    }
+  }
+
+  static async resetPassword(email: string, password: string, confirmPassword: string) {
+    try {
+      const response = await api.auth.resetPassword({ email, password, confirmPassword });
+      return response;
+    } catch (error) {
+      console.error('Error en AuthService.resetPassword:', error);
+      throw error;
+    }
+  }
 }

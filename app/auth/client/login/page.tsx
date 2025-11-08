@@ -2,10 +2,11 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  ShoppingCart, 
-  ArrowLeft, 
+import {
+  ShoppingCart,
+  ArrowLeft,
   Mail,
   Lock,
   Eye,
@@ -24,6 +25,7 @@ import { AuthService } from '@/services/auth.service';
 import { toast } from 'sonner';
 
 export default function ClientAuth() {
+  const router = useRouter();
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -396,6 +398,19 @@ export default function ClientAuth() {
                               {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                             </button>
                           </div>
+                        </div>
+                      )}
+
+                      {isLogin && (
+                        <div className="text-right">
+                          <Button
+                            type="button"
+                            variant="link"
+                            onClick={() => router.push('/auth/forgot-password')}
+                            className="text-sm text-blue-600 hover:text-blue-700 px-0"
+                          >
+                            ¿Olvidaste tu contraseña?
+                          </Button>
                         </div>
                       )}
 

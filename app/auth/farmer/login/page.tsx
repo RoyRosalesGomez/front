@@ -1,11 +1,12 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Tractor, 
-  ArrowLeft, 
+import {
+  Tractor,
+  ArrowLeft,
   Mail,
   Lock,
   Eye,
@@ -24,10 +25,13 @@ import { AuthService } from '@/services/auth.service';
 import { toast } from 'sonner';
 
 export default function FarmerAuth() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [formKey, setFormKey] = useState(Date.now()); // Key para forzar re-render del form
   const [formData, setFormData] = useState({
     name: '',
     lastName: '',
@@ -38,6 +42,34 @@ export default function FarmerAuth() {
     password: '',
     confirmPassword: ''
   });
+
+  // Detectar si viene de un reset de contraseña
+  useEffect(() => {
+    if (searchParams.get('passwordReset') === 'true') {
+      // Forzar re-render completo del formulario
+      setFormKey(Date.now());
+
+      // Limpiar completamente el formulario
+      setFormData({
+        name: '',
+        lastName: '',
+        email: '',
+        phone: '',
+        location: '',
+        residence: '',
+        password: '',
+        confirmPassword: ''
+      });
+
+      toast.success('Contraseña actualizada exitosamente. Inicia sesión con tu nueva contraseña.');
+
+      // Limpiar los parámetros de la URL sin causar re-render
+      const url = new URL(window.location.href);
+      url.searchParams.delete('passwordReset');
+      url.searchParams.delete('t');
+      window.history.replaceState({}, '', url.pathname);
+    }
+  }, [searchParams]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -51,19 +83,27 @@ export default function FarmerAuth() {
     setIsLoading(true);
 
     try {
-
-  if (isLogin) {
-  const email = formData.email.trim().toLowerCase();   // ✅ normaliza
-  const password = formData.password;                  // no toques espacios intermedios
-
-  const response = await AuthService.login(email, password);
-}
-
       if (isLogin) {
         try {
+          // Normalizar email y password
+          const email = formData.email.trim().toLowerCase();
+          const password = formData.password;
+
+          console.log('[FARMER LOGIN] Intentando login con:', {
+            email,
+            passwordLength: password.length,
+            passwordPreview: password.substring(0, 3) + '...'
+          });
+
           // Intentar login real con el backend
-          const response = await AuthService.login(formData.email, formData.password);
-          
+          const response = await AuthService.login(email, password);
+
+          console.log('[FARMER LOGIN] Respuesta del backend:', {
+            hasToken: !!response?.access_token,
+            userRole: response?.user?.role,
+            userStatus: response?.user?.status
+          });
+
           // Verificar que sea agricultor
           if (response.user.role !== 'farmer') {
             toast.error('Acceso denegado. Esta sección es solo para agricultores.');
@@ -79,7 +119,7 @@ export default function FarmerAuth() {
           toast.success(`¡Bienvenido ${response.user.name}!`);
           window.location.href = '/dashboard/farmer';
         } catch (error: any) {
-          console.error('Error en login:', error);
+          console.error('[FARMER LOGIN] Error completo:', error);
           toast.error(error.message || 'Error al iniciar sesión. Verifica tus credenciales.');
         }
       } else {
@@ -235,7 +275,7 @@ export default function FarmerAuth() {
                       </p>
                     </div>
 
-                    <form onSubmit={handleSubmit} className="space-y-6">
+                    <form key={formKey} onSubmit={handleSubmit} className="space-y-6">
                       {!isLogin && (
                         <>
                           <div className="space-y-2">
@@ -367,6 +407,7 @@ export default function FarmerAuth() {
                             required
                             value={formData.password}
                             onChange={handleInputChange}
+                            autoComplete="current-password"
                             className="pl-10 pr-10 border-gray-200 focus:border-green-500 focus:ring-green-500"
                             placeholder="Ingresa tu contraseña"
                           />
@@ -407,7 +448,20 @@ export default function FarmerAuth() {
                           </div>
                         </div>
                       )}
-                     
+
+                      {isLogin && (
+                        <div className="text-right">
+                          <Button
+                            type="button"
+                            variant="link"
+                            onClick={() => router.push('/auth/forgot-password')}
+                            className="text-sm text-green-600 hover:text-green-700 px-0"
+                          >
+                            ¿Olvidaste tu contraseña?
+                          </Button>
+                        </div>
+                      )}
+
                       <Button
                         type="submit"
                         disabled={isLoading}

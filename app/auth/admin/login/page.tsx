@@ -340,6 +340,19 @@ export default function AdminAuth() {
                         </div>
                       )}
 
+                      {isLogin && (
+                        <div className="text-right">
+                          <Button
+                            type="button"
+                            variant="link"
+                            onClick={() => router.push('/auth/forgot-password')}
+                            className="text-sm text-purple-600 hover:text-purple-700 px-0"
+                          >
+                            ¿Olvidaste tu contraseña?
+                          </Button>
+                        </div>
+                      )}
+
                       <Button
                         type="submit"
                         disabled={isLoading}
