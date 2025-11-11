@@ -73,7 +73,7 @@ export default function ClientWelcome() {
                 </h2>
                 
                 <p className="text-xl text-gray-600 mb-8 leading-relaxed">
-                  Accede a nuestro marketplace exclusivo para descubrir productos agrícolas 
+                  Accede a nuestro mercado exclusivo para descubrir productos agrícolas 
                   frescos y de la más alta calidad directamente de los productores.
                 </p>
 

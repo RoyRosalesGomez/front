@@ -1,8 +1,7 @@
+"use client";
 
-'use client';
-
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   ShoppingCart,
   Search,
@@ -18,18 +17,18 @@ import {
   Leaf,
   Package,
   Trash2,
-  ArrowLeft
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { ProductService } from '@/services/product.service';
-import { toast } from 'sonner';
-import { AuthService } from '@/services/auth.service';
-import { OrderService } from '@/services/order.service';
-
+  ArrowLeft,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { ProductService } from "@/services/product.service";
+import { toast } from "sonner";
+import { AuthService } from "@/services/auth.service";
+import { OrderService } from "@/services/order.service";
+import Swal from "sweetalert2";
 
 interface Product {
   id: number;
@@ -46,21 +45,20 @@ interface Product {
   rating: number;
 }
 
-
 interface CartItem extends Product {
   quantity: number;
 }
 
 export default function ClientDashboard() {
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [searchTerm, setSearchTerm] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [productQuantity, setProductQuantity] = useState(1);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [showCart, setShowCart] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState("all");
   const [adding, setAdding] = useState(false);
   const [finalizing, setFinalizing] = useState(false); // evita doble clic en “Finalizar compra”
 
@@ -74,15 +72,16 @@ export default function ClientDashboard() {
   const loadProducts = async (): Promise<void> => {
     setLoading(true);
     try {
-      // Solo cargar productos aprobados para el marketplace
+      // Solo cargar productos aprobados para la tienda
       const data = await ProductService.getApprovedProducts({
-        category: categoryFilter === 'all' ? undefined : categoryFilter as any,
-        search: searchTerm || undefined
+        category:
+          categoryFilter === "all" ? undefined : (categoryFilter as any),
+        search: searchTerm || undefined,
       });
       setProducts(data);
     } catch (error) {
-      console.error('Error loading products:', error);
-      toast.error('Error al cargar productos del marketplace');
+      console.error("Error loading products:", error);
+      toast.error("Error al cargar productos de la tienda");
     } finally {
       setLoading(false);
     }
@@ -90,30 +89,45 @@ export default function ClientDashboard() {
 
   // Helpers para pintar texto sin romper el JSX
   const farmerNameOf = (p?: { farmer?: any } | null): string => {
-    if (!p || p.farmer == null) return '';
-    return typeof p.farmer === 'string' ? p.farmer : (p.farmer?.name ?? '');
+    if (!p || p.farmer == null) return "";
+    return typeof p.farmer === "string" ? p.farmer : (p.farmer?.name ?? "");
   };
 
   const farmerLocationOf = (
     p?: { farmer?: any; location?: string } | null
   ): string => {
-    if (!p) return '';
+    if (!p) return "";
     // si farmer es string, usa location de raíz
-    if (typeof p.farmer === 'string') return p.location ?? '';
+    if (typeof p.farmer === "string") return p.location ?? "";
     // si farmer es objeto, prioriza su location
-    return p.farmer?.location ?? p.location ?? '';
+    return p.farmer?.location ?? p.location ?? "";
   };
 
-
-  const handleBuyNow = (product: Product): void => {
+  const handleBuyNow = async (product: Product): Promise<void> => {
     if (adding) return;
     setAdding(true);
     try {
-      addToCart(product, productQuantity);   // ← solo carrito
+      addToCart(product, productQuantity); // ← solo carrito
       setSelectedProduct(null);
       setProductQuantity(1);
       setShowCart(true);
-      toast.success('¡Producto agregado al carrito!');
+
+      // ✅ Confirmación de producto agregado con "Comprar ahora"
+      await Swal.fire({
+        title: "¡Agregado al carrito!",
+        html: `
+          <p class="text-gray-700">${product.name}</p>
+          <p class="text-sm text-gray-600 mt-1">Cantidad: ${productQuantity}</p>
+          <p class="text-green-600 font-semibold mt-2">₡${(product.price * productQuantity).toLocaleString()}</p>
+          <p class="text-sm text-blue-600 mt-2">Abriendo carrito...</p>
+        `,
+        icon: "success",
+        timer: 1500,
+        timerProgressBar: true,
+        showConfirmButton: false,
+        toast: true,
+        position: "top-end",
+      });
     } finally {
       setAdding(false);
     }
@@ -124,23 +138,26 @@ export default function ClientDashboard() {
   };
 
   const categories = [
-    { id: 'all', name: 'Todos', icon: '🌾' },
-    { id: 'frutas', name: 'Frutas', icon: '🍎' },
-    { id: 'verduras', name: 'Verduras', icon: '🥬' },
-    { id: 'granos', name: 'Granos', icon: '🌽' }
+    { id: "all", name: "Todos", icon: "🌾" },
+    { id: "frutas", name: "Frutas", icon: "🍎" },
+    { id: "verduras", name: "Verduras", icon: "🥬" },
+    { id: "granos", name: "Granos", icon: "🌽" },
   ];
 
-  const filteredProducts = products.filter(product => {
-    const matchesCategory = categoryFilter === 'all' || product.category === categoryFilter;
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredProducts = products.filter((product) => {
+    const matchesCategory =
+      categoryFilter === "all" || product.category === categoryFilter;
+    const matchesSearch = product.name
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase());
     return matchesCategory && matchesSearch;
   });
 
   const addToCart = (product: Product, quantity: number): void => {
-    setCart(prevCart => {
-      const existingItem = prevCart.find(item => item.id === product.id);
+    setCart((prevCart) => {
+      const existingItem = prevCart.find((item) => item.id === product.id);
       if (existingItem) {
-        return prevCart.map(item =>
+        return prevCart.map((item) =>
           item.id === product.id
             ? { ...item, quantity: item.quantity + quantity }
             : item
@@ -155,15 +172,31 @@ export default function ClientDashboard() {
       removeFromCart(productId);
       return;
     }
-    setCart(prevCart =>
-      prevCart.map(item =>
+    setCart((prevCart) =>
+      prevCart.map((item) =>
         item.id === productId ? { ...item, quantity: newQuantity } : item
       )
     );
   };
 
-  const removeFromCart = (productId: number): void => {
-    setCart(prevCart => prevCart.filter(item => item.id !== productId));
+  const removeFromCart = async (productId: number): Promise<void> => {
+    const item = cart.find((c) => c.id === productId);
+
+    const result = await Swal.fire({
+      title: "¿Eliminar del carrito?",
+      text: `Se eliminará "${item?.name ?? ""}" del carrito`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#ef4444",
+      cancelButtonColor: "#6b7280",
+      confirmButtonText: "Sí, eliminar",
+      cancelButtonText: "Cancelar",
+    });
+
+    if (!result.isConfirmed) return;
+
+    setCart((prevCart) => prevCart.filter((item) => item.id !== productId));
+    toast.success("Producto eliminado del carrito");
   };
 
   const getTotalItems = (): number => {
@@ -171,7 +204,7 @@ export default function ClientDashboard() {
   };
 
   const getSubtotal = (): number => {
-    return cart.reduce((total, item) => total + (item.price * item.quantity), 0);
+    return cart.reduce((total, item) => total + item.price * item.quantity, 0);
   };
 
   const getIVA = (): number => {
@@ -182,8 +215,25 @@ export default function ClientDashboard() {
     return getSubtotal() + getIVA();
   };
 
-  const handleAddToCart = (product: Product): void => {
+  const handleAddToCart = async (product: Product): Promise<void> => {
     addToCart(product, productQuantity);
+
+    // ✅ Confirmación de producto agregado al carrito
+    await Swal.fire({
+      title: "¡Agregado al carrito!",
+      html: `
+        <p class="text-gray-700">${product.name}</p>
+        <p class="text-sm text-gray-600 mt-1">Cantidad: ${productQuantity}</p>
+        <p class="text-green-600 font-semibold mt-2">₡${(product.price * productQuantity).toLocaleString()}</p>
+      `,
+      icon: "success",
+      timer: 2000,
+      timerProgressBar: true,
+      showConfirmButton: false,
+      toast: true,
+      position: "top-end",
+    });
+
     setSelectedProduct(null);
     setProductQuantity(1);
   };
@@ -207,7 +257,9 @@ export default function ClientDashboard() {
                 <h1 className="text-2xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
                   AgroGlobal
                 </h1>
-                <p className="text-sm text-black-500">Marketplace Cliente 🍉  🥦  🍚</p>
+                <p className="text-sm text-black-500">
+                  Tienda Cliente 🍉 🥦 🍚
+                </p>
               </div>
             </motion.div>
 
@@ -279,10 +331,11 @@ export default function ClientDashboard() {
           transition={{ duration: 0.6 }}
         >
           <h2 className="text-3xl font-bold text-gray-900 mb-2">
-            ¡Bienvenido al Marketplace! 🛒
+            ¡Bienvenido a la Tienda! 🛒
           </h2>
           <p className="text-gray-600">
-            Descubre productos agrícolas frescos y de calidad directamente de los productores
+            Descubre productos agrícolas frescos y de calidad directamente de
+            los productores
           </p>
         </motion.div>
 
@@ -312,10 +365,11 @@ export default function ClientDashboard() {
                 key={category.id}
                 variant={categoryFilter === category.id ? "default" : "outline"}
                 onClick={() => setCategoryFilter(category.id)}
-                className={`${categoryFilter === category.id
-                    ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white'
-                    : 'border-gray-200 hover:bg-blue-50'
-                  }`}
+                className={`${
+                  categoryFilter === category.id
+                    ? "bg-gradient-to-r from-blue-500 to-cyan-500 text-white"
+                    : "border-gray-200 hover:bg-blue-50"
+                }`}
               >
                 <span className="mr-2">{category.icon}</span>
                 {category.name}
@@ -366,9 +420,9 @@ export default function ClientDashboard() {
                         {product.name}
                       </h3>
                       <p className="text-sm text-gray-500">
-                        Por: {farmerNameOf(product)} • {farmerLocationOf(product)}
+                        Por: {farmerNameOf(product)} •{" "}
+                        {farmerLocationOf(product)}
                       </p>
-
                     </div>
 
                     <div className="flex items-center justify-between mb-4">
@@ -463,7 +517,9 @@ export default function ClientDashboard() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setProductQuantity(Math.max(1, productQuantity - 1))}
+                      onClick={() =>
+                        setProductQuantity(Math.max(1, productQuantity - 1))
+                      }
                       disabled={productQuantity <= 1}
                     >
                       <Minus className="h-4 w-4" />
@@ -484,9 +540,14 @@ export default function ClientDashboard() {
 
                 <div className="mb-6 p-4 bg-gray-50 rounded-lg">
                   <div className="flex justify-between items-center">
-                    <span className="text-lg font-semibold text-gray-700">Total:</span>
+                    <span className="text-lg font-semibold text-gray-700">
+                      Total:
+                    </span>
                     <span className="text-2xl font-bold text-green-600">
-                      ₡{(selectedProduct.price * productQuantity).toLocaleString()}
+                      ₡
+                      {(
+                        selectedProduct.price * productQuantity
+                      ).toLocaleString()}
                     </span>
                   </div>
                 </div>
@@ -498,7 +559,7 @@ export default function ClientDashboard() {
                     disabled={adding}
                   >
                     <ShoppingCart className="mr-2 h-5 w-5" />
-                    {adding ? 'Agregando…' : 'Comprar Ahora'}
+                    {adding ? "Agregando…" : "Comprar Ahora"}
                   </Button>
                   <Button
                     variant="outline"
@@ -549,7 +610,9 @@ export default function ClientDashboard() {
                 {cart.length === 0 ? (
                   <div className="text-center py-12">
                     <Package className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                    <p className="text-xl text-gray-500 mb-4">Tu carrito está vacío</p>
+                    <p className="text-xl text-gray-500 mb-4">
+                      Tu carrito está vacío
+                    </p>
                     <Button
                       onClick={() => setShowCart(false)}
                       className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white"
@@ -579,7 +642,8 @@ export default function ClientDashboard() {
                               {item.name}
                             </h3>
                             <p className="text-sm text-gray-500">
-                              Por: {farmerNameOf(item)} • {farmerLocationOf(item)}
+                              Por: {farmerNameOf(item)} •{" "}
+                              {farmerLocationOf(item)}
                             </p>
 
                             <p className="text-lg font-bold text-green-600">
@@ -591,7 +655,9 @@ export default function ClientDashboard() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => updateCartQuantity(item.id, item.quantity - 1)}
+                              onClick={() =>
+                                updateCartQuantity(item.id, item.quantity - 1)
+                              }
                             >
                               <Minus className="h-4 w-4" />
                             </Button>
@@ -601,7 +667,9 @@ export default function ClientDashboard() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => updateCartQuantity(item.id, item.quantity + 1)}
+                              onClick={() =>
+                                updateCartQuantity(item.id, item.quantity + 1)
+                              }
                             >
                               <Plus className="h-4 w-4" />
                             </Button>
@@ -629,15 +697,21 @@ export default function ClientDashboard() {
                       <div className="space-y-3 mb-6">
                         <div className="flex justify-between text-lg">
                           <span className="text-gray-600">Subtotal:</span>
-                          <span className="font-semibold">₡{getSubtotal().toLocaleString()}</span>
+                          <span className="font-semibold">
+                            ₡{getSubtotal().toLocaleString()}
+                          </span>
                         </div>
                         <div className="flex justify-between text-lg">
                           <span className="text-gray-600">IVA (13%):</span>
-                          <span className="font-semibold">₡{getIVA().toLocaleString()}</span>
+                          <span className="font-semibold">
+                            ₡{getIVA().toLocaleString()}
+                          </span>
                         </div>
                         <div className="flex justify-between text-2xl font-bold border-t border-gray-200 pt-3">
                           <span className="text-gray-900">Total:</span>
-                          <span className="text-green-600">₡{getTotal().toLocaleString()}</span>
+                          <span className="text-green-600">
+                            ₡{getTotal().toLocaleString()}
+                          </span>
                         </div>
                       </div>
 
@@ -655,11 +729,31 @@ export default function ClientDashboard() {
                           disabled={finalizing || cart.length === 0}
                           onClick={async () => {
                             if (finalizing) return;
+
+                            // Confirmación antes de finalizar compra
+                            const result = await Swal.fire({
+                              title: "¿Finalizar compra?",
+                              html: `
+                                <p>Se procesarán <strong>${cart.length}</strong> producto(s)</p>
+                                <p class="text-lg font-bold mt-2">Total: ₡${getTotal().toFixed(2)}</p>
+                              `,
+                              icon: "question",
+                              showCancelButton: true,
+                              confirmButtonColor: "#10b981",
+                              cancelButtonColor: "#6b7280",
+                              confirmButtonText: "Sí, finalizar",
+                              cancelButtonText: "Cancelar",
+                            });
+
+                            if (!result.isConfirmed) return;
+
                             setFinalizing(true);
                             try {
                               const me = AuthService.getCurrentUser();
                               if (!me?.id) {
-                                toast.error('Debes iniciar sesión para comprar');
+                                toast.error(
+                                  "Debes iniciar sesión para comprar"
+                                );
                                 setFinalizing(false);
                                 return;
                               }
@@ -670,25 +764,43 @@ export default function ClientDashboard() {
                                   productId: item.id,
                                   customerId: me.id,
                                   quantity: item.quantity,
-                                  notes: 'Compra finalizada desde carrito',
+                                  notes: "Compra finalizada desde carrito",
                                 });
                               }
 
-                              toast.success('¡Compra realizada con éxito! El agricultor será notificado.');
+                              // ✅ Confirmación de compra exitosa
+                              await Swal.fire({
+                                title: "¡Compra realizada!",
+                                html: `
+                                  <p class="text-green-600 font-semibold">Tu pedido ha sido procesado exitosamente</p>
+                                  <p class="text-sm text-gray-600 mt-2">Total pagado: ₡${getTotal().toLocaleString()}</p>
+                                  <p class="text-sm text-gray-500 mt-1">El agricultor ha sido notificado</p>
+                                `,
+                                icon: "success",
+                                confirmButtonColor: "#10b981",
+                                confirmButtonText: "¡Entendido!",
+                              });
+
                               setCart([]);
                               setShowCart(false);
                             } catch (err) {
-                              console.error('Error processing orders:', err);
-                              toast.error('No se pudo completar la compra');
+                              console.error("Error processing orders:", err);
+
+                              // ❌ Error al procesar compra
+                              await Swal.fire({
+                                title: "Error al procesar",
+                                text: "No se pudo completar la compra. Por favor intenta nuevamente.",
+                                icon: "error",
+                                confirmButtonColor: "#ef4444",
+                              });
                             } finally {
                               setFinalizing(false);
                             }
                           }}
                         >
                           <ShoppingCart className="mr-2 h-5 w-5" />
-                          {finalizing ? 'Procesando…' : 'Finalizar Compra'}
+                          {finalizing ? "Procesando…" : "Finalizar Compra"}
                         </Button>
-
                       </div>
                     </div>
                   </>

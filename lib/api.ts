@@ -125,7 +125,7 @@ if (!response.ok) {
         method: 'POST',
         body: JSON.stringify(credentials),
       }),
-    
+
     register: (userData: {
       name: string;
       lastName?: string;
@@ -139,6 +139,18 @@ if (!response.ok) {
       this.request('/auth/register', {
         method: 'POST',
         body: JSON.stringify(userData),
+      }),
+
+    forgotPassword: (email: string) =>
+      this.request('/auth/forgot-password', {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      }),
+
+    resetPassword: (data: { email: string; password: string; confirmPassword: string }) =>
+      this.request('/auth/reset-password', {
+        method: 'POST',
+        body: JSON.stringify(data),
       }),
   };
 
@@ -341,99 +353,34 @@ if (!response.ok) {
 
   // 🌱 SERVICIOS DE CULTIVOS
   cultivos = {
-    create: async (cultivoData: {
+    create: (cultivoData: {
       name: string;
       variedad: string;
       comentario?: string;
-      image?: File | null;
-      farmerId: number;
-    }) => {
-      const formData = new FormData();
-      formData.append('name', cultivoData.name);
-      formData.append('variedad', cultivoData.variedad);
-      if (cultivoData.comentario) formData.append('comentario', cultivoData.comentario);
-      if (cultivoData.image) formData.append('image', cultivoData.image);
-      formData.append('farmerId', cultivoData.farmerId.toString());
-
-      const token = this.getToken();
-      const url = `${API_BASE_URL}/cultivos`;
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Authorization': token ? `Bearer ${token}` : '',
-        },
-        body: formData,
-      });
-
-      if (!response.ok) {
-        let message = `HTTP ${response.status}`;
-        try {
-          const txt = await response.text();
-          if (txt) {
-            try { message = JSON.parse(txt).message || message; }
-            catch { message = txt || message; }
-          }
-        } catch {}
-        throw new Error(message);
-      }
-
-      return response.json();
-    },
-
+      image?: string;
+     // farmerId: number;
+    }) => this.request('/cultivos', {
+      method: 'POST',
+      body: JSON.stringify(cultivoData),
+    }),
+    
     getAll: (params?: { farmerId?: number; active?: boolean }) => {
       const queryParams = new URLSearchParams();
       if (params?.farmerId) queryParams.append('farmerId', params.farmerId.toString());
       if (params?.active !== undefined) queryParams.append('active', params.active.toString());
       return this.request(`/cultivos?${queryParams}`);
     },
-
-    update: async (id: number, cultivoData: any) => {
-      // Si hay un archivo, usar FormData
-      if (cultivoData.image instanceof File) {
-        const formData = new FormData();
-        formData.append('name', cultivoData.name);
-        formData.append('variedad', cultivoData.variedad);
-        if (cultivoData.comentario) formData.append('comentario', cultivoData.comentario);
-        formData.append('image', cultivoData.image);
-
-        const token = this.getToken();
-        const url = `${API_BASE_URL}/cultivos/${id}`;
-
-        const response = await fetch(url, {
-          method: 'PATCH',
-          headers: {
-            'Authorization': token ? `Bearer ${token}` : '',
-          },
-          body: formData,
-        });
-
-        if (!response.ok) {
-          let message = `HTTP ${response.status}`;
-          try {
-            const txt = await response.text();
-            if (txt) {
-              try { message = JSON.parse(txt).message || message; }
-              catch { message = txt || message; }
-            }
-          } catch {}
-          throw new Error(message);
-        }
-
-        return response.json();
-      }
-
-      // Si no hay archivo, usar JSON normal
-      return this.request(`/cultivos/${id}`, {
+    
+    update: (id: number, cultivoData: any) =>
+      this.request(`/cultivos/${id}`, {
         method: 'PATCH',
         body: JSON.stringify(cultivoData),
-      });
-    },
-
-    toggleActive: (id: number) =>
+      }),
+    
+    toggleActive: (id: number) => 
       this.request(`/cultivos/${id}/toggle-active`, { method: 'PATCH' }),
-
-    delete: (id: number) =>
+    
+    delete: (id: number) => 
       this.request(`/cultivos/${id}`, { method: 'DELETE' }),
   };
 
