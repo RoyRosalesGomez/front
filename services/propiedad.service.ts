@@ -2,22 +2,20 @@ import { api, Propiedad } from '@/lib/api';
 
 export class PropiedadService {
   // Crear nueva propiedad
-  // services/propiedad.service.ts
-// Antes: farmerId: number;
-static async createPropiedad(propiedadData: {
-  nombre: string;
-  localizacion: string;
-  tamano: string;
-  comentario?: string;
-  farmerId?: number;   // <-- opcional aquí
-}) {
-  try {
-    return await api.propiedades.create(propiedadData);
-  } catch (error) {
-    console.error('Error en PropiedadService.createPropiedad:', error);
-    throw error;
+  static async createPropiedad(propiedadData: {
+    nombre: string;
+    localizacion: string;
+    tamano: string;
+    comentario?: string;
+    farmerId: number;
+  }) {
+    try {
+      return await api.propiedades.create(propiedadData);
+    } catch (error) {
+      console.error('Error en PropiedadService.createPropiedad:', error);
+      throw error;
+    }
   }
-}
 
   // Obtener todas las propiedades con filtros
   static async getAllPropiedades(filters?: { farmerId?: number; active?: boolean }) {

@@ -29,6 +29,7 @@ import { toast } from "sonner";
 import { AuthService } from "@/services/auth.service";
 import { OrderService } from "@/services/order.service";
 import Swal from "sweetalert2";
+import { getProductImageUrl } from "@/lib/image-utils";
 
 interface Product {
   id: number;
@@ -78,6 +79,11 @@ export default function ClientDashboard() {
           categoryFilter === "all" ? undefined : (categoryFilter as any),
         search: searchTerm || undefined,
       });
+      console.log('📦 [Cliente] Productos cargados desde backend:', data);
+      if (data && data.length > 0) {
+        console.log('🖼️ [Cliente] Primera imagen recibida:', data[0].image);
+        console.log('🔗 [Cliente] URL construida:', getProductImageUrl(data[0].image));
+      }
       setProducts(data);
     } catch (error) {
       console.error("Error loading products:", error);
@@ -388,7 +394,10 @@ export default function ClientDashboard() {
               </div>
             </div>
           ) : (
-            filteredProducts.map((product, index) => (
+            filteredProducts.map((product, index) => {
+              const imageUrl = getProductImageUrl(product.image);
+              console.log(`🖼️ [Cliente Grid] Producto: ${product.name}, Imagen original: ${product.image}, URL construida: ${imageUrl}`);
+              return (
               <motion.div
                 key={product.id}
                 initial={{ opacity: 0, y: 50 }}
@@ -398,9 +407,13 @@ export default function ClientDashboard() {
                 <Card className="group hover:shadow-2xl hover:shadow-blue-500/10 transition-all duration-500 border-0 bg-white overflow-hidden cursor-pointer transform hover:scale-105">
                   <div className="relative h-48 overflow-hidden">
                     <img
-                      src={product.image}
+                      src={imageUrl || "https://images.pexels.com/photos/1458694/pexels-photo-1458694.jpeg"}
                       alt={product.name}
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                      onError={(e) => {
+                        console.error(`❌ [Cliente] Error cargando imagen: ${e.currentTarget.src}`);
+                        e.currentTarget.src = "https://images.pexels.com/photos/1458694/pexels-photo-1458694.jpeg";
+                      }}
                     />
                     {/* <div className="absolute top-3 right-3">
                     <Badge className="bg-white/90 text-gray-700 flex items-center space-x-1">
@@ -446,7 +459,8 @@ export default function ClientDashboard() {
                   </CardContent>
                 </Card>
               </motion.div>
-            ))
+            );
+            })
           )}
         </div>
       </div>
@@ -471,9 +485,13 @@ export default function ClientDashboard() {
             >
               <div className="relative">
                 <img
-                  src={selectedProduct.image}
+                  src={getProductImageUrl(selectedProduct.image) || "https://images.pexels.com/photos/1458694/pexels-photo-1458694.jpeg"}
                   alt={selectedProduct.name}
                   className="w-full h-80 object-cover"
+                  onError={(e) => {
+                    console.error(`❌ [Cliente Modal] Error cargando imagen: ${e.currentTarget.src}`);
+                    e.currentTarget.src = "https://images.pexels.com/photos/1458694/pexels-photo-1458694.jpeg";
+                  }}
                 />
                 <button
                   onClick={() => setSelectedProduct(null)}
@@ -623,7 +641,10 @@ export default function ClientDashboard() {
                 ) : (
                   <>
                     <div className="space-y-4 mb-8">
-                      {cart.map((item) => (
+                      {cart.map((item) => {
+                        const cartImageUrl = getProductImageUrl(item.image);
+                        console.log(`🛒 [Cliente Carrito] Item: ${item.name}, Imagen: ${item.image}, URL: ${cartImageUrl}`);
+                        return (
                         <motion.div
                           key={item.id}
                           className="flex items-center space-x-4 p-4 bg-gray-50 rounded-xl"
@@ -632,9 +653,13 @@ export default function ClientDashboard() {
                           transition={{ duration: 0.3 }}
                         >
                           <img
-                            src={item.image}
+                            src={cartImageUrl || "https://images.pexels.com/photos/1458694/pexels-photo-1458694.jpeg"}
                             alt={item.name}
                             className="w-20 h-20 object-cover rounded-lg"
+                            onError={(e) => {
+                              console.error(`❌ [Cliente Carrito] Error cargando imagen: ${e.currentTarget.src}`);
+                              e.currentTarget.src = "https://images.pexels.com/photos/1458694/pexels-photo-1458694.jpeg";
+                            }}
                           />
 
                           <div className="flex-1">
@@ -689,7 +714,8 @@ export default function ClientDashboard() {
                             </Button>
                           </div>
                         </motion.div>
-                      ))}
+                        );
+                      })}
                     </div>
 
                     {/* Totals */}

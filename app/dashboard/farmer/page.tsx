@@ -69,7 +69,7 @@ import { OrderService } from "@/services/order.service";
 import type { Order as OrderApi } from "@/lib/api";
 import { VetShopService } from "@/services/vetshop.service";
 import Swal from "sweetalert2";
-import { getCultivoImageUrl } from "@/lib/image-utils";
+import { getCultivoImageUrl, getProductImageUrl, getVetShopImageUrl } from "@/lib/image-utils";
 
 import { AIAssistant } from "@/components/ui/ai-assistant";
 
@@ -286,6 +286,7 @@ export default function FarmerDashboard() {
     tamano: "",
     comentario: "",
   });
+  const [productImageFile, setProductImageFile] = useState<File | null>(null);
 
   // Estado de edición para bitácora (usa el MISMO modal de crear)
   const [editingEntryId, setEditingEntryId] = useState<number | null>(null);
@@ -469,6 +470,11 @@ export default function FarmerDashboard() {
   const loadActiveVetShops = async () => {
     try {
       const data = await VetShopService.getActiveVetShops();
+      console.log('🏪 [Farmer] VetShops cargadas desde backend:', data);
+      if (data && data.length > 0) {
+        console.log('🖼️ [Farmer] Primera imagen recibida:', data[0].image);
+        console.log('🔗 [Farmer] URL construida:', getVetShopImageUrl(data[0].image));
+      }
       // normaliza active por si viene 0/1
       const normalized = (data || []).map((v: any) => ({
         ...v,
@@ -534,21 +540,13 @@ export default function FarmerDashboard() {
       const farmerId = Number(me?.id);
 
       // Construye el payload. Si hay farmerId numérico, lo mandamos; si no, lo omitimos.
-      const payload: {
-        nombre: string;
-        localizacion: string;
-        tamano: string;
-        comentario?: string;
-        farmerId?: number; // <-- opcional en el payload
-      } = {
+      const created = await PropiedadService.createPropiedad({
         nombre: propiedadForm.nombre,
         localizacion: propiedadForm.localizacion,
         tamano: propiedadForm.tamano,
         comentario: propiedadForm.comentario || undefined,
-        ...(Number.isFinite(farmerId) ? { farmerId } : {}), // <-- solo si existe
-      };
-
-      const created = await PropiedadService.createPropiedad(payload);
+        farmerId: farmerId,
+      });
 
       const normalized = {
         ...created,
@@ -730,6 +728,12 @@ export default function FarmerDashboard() {
       toast.error("Por favor completa todos los campos requeridos");
       return;
     }
+
+    if (!currentUser?.id) {
+      toast.error("No se pudo obtener el ID del usuario");
+      return;
+    }
+
     try {
       await ProductService.createProduct({
         name: productForm.name,
@@ -737,12 +741,10 @@ export default function FarmerDashboard() {
         price: parseFloat(productForm.price),
         unit: productForm.unit,
         stock: parseInt(productForm.stock),
-        image:
-          productForm.image ||
-          "https://images.pexels.com/photos/1458694/pexels-photo-1458694.jpeg",
+        image: productImageFile,
         category: productForm.category,
-        status: "pending", // <- aquí
-        farmerId: currentUser?.id ?? 1,
+        status: "pending",
+        farmerId: currentUser.id,
       });
 
       toast.success(
@@ -758,6 +760,7 @@ export default function FarmerDashboard() {
         image: "",
         category: "otros",
       });
+      setProductImageFile(null);
       await loadMyProducts();
     } catch (error) {
       console.error("Error adding product:", error);
@@ -772,6 +775,11 @@ export default function FarmerDashboard() {
     try {
       // Ajusta si tu servicio tiene otro nombre/forma
       const data = await ProductService.getProductsByFarmerId(currentUser.id);
+      console.log('📦 Productos cargados desde backend:', data);
+      if (data && data.length > 0) {
+        console.log('🖼️ Primera imagen recibida:', data[0].image);
+        console.log('🔗 URL construida:', getProductImageUrl(data[0].image));
+      }
       // o: const { items } = await ProductService.getMyProducts({ farmerId: currentUser.id });
       setMyProducts(data);
     } catch (e) {
@@ -827,25 +835,27 @@ export default function FarmerDashboard() {
       return;
     }
 
-    try {
-      const payload = {
-        name: productForm.name,
-        description: productForm.description,
-        price: parseFloat(productForm.price),
-        unit: productForm.unit,
-        stock: parseInt(productForm.stock),
-        image:
-          productForm.image ||
-          "https://images.pexels.com/photos/1458694/pexels-photo-1458694.jpeg",
-        category: productForm.category,
-        farmerId: currentUser?.id ?? 1, // usa el id real
-        // si tu backend no pone por defecto, envía status:
-        //status: 'pending' as const
-      };
+    if (!currentUser?.id) {
+      toast.error("No se pudo obtener el ID del usuario");
+      return;
+    }
 
+    try {
       if (editingProductId == null) {
-        // crear
-        await ProductService.createProduct(payload);
+        // Crear nuevo producto
+        const createdProduct = await ProductService.createProduct({
+          name: productForm.name,
+          description: productForm.description,
+          price: parseFloat(productForm.price),
+          unit: productForm.unit,
+          stock: parseInt(productForm.stock),
+          image: productImageFile,
+          category: productForm.category,
+          status: "pending",
+          farmerId: currentUser.id,
+        });
+        console.log('✅ Producto creado, respuesta del backend:', createdProduct);
+        console.log('🖼️ Imagen devuelta por backend:', createdProduct?.image);
         await Swal.fire({
           title: "¡Producto creado!",
           html: '<p>Tu producto ha sido creado exitosamente</p><p class="text-sm text-gray-600 mt-2">Queda pendiente de aprobación por el administrador</p>',
@@ -855,7 +865,21 @@ export default function FarmerDashboard() {
           showConfirmButton: false,
         });
       } else {
-        // actualizar
+        // Actualizar producto existente
+        const payload: any = {
+          name: productForm.name,
+          description: productForm.description,
+          price: parseFloat(productForm.price),
+          unit: productForm.unit,
+          stock: parseInt(productForm.stock),
+          category: productForm.category,
+        };
+
+        // Solo incluir la imagen si se seleccionó un nuevo archivo
+        if (productImageFile) {
+          payload.image = productImageFile;
+        }
+
         await ProductService.updateProduct(editingProductId, payload);
         await Swal.fire({
           title: "¡Cambios guardados!",
@@ -869,6 +893,16 @@ export default function FarmerDashboard() {
 
       setShowAddProduct(false);
       setEditingProductId(null);
+      setProductForm({
+        name: "",
+        description: "",
+        price: "",
+        unit: "",
+        stock: "",
+        image: "",
+        category: "otros",
+      });
+      setProductImageFile(null);
       await loadMyProducts();
     } catch (error) {
       console.error(error);
@@ -1369,9 +1403,12 @@ export default function FarmerDashboard() {
             >
               <div className="relative h-48 overflow-hidden">
                 <img
-                  src={product.image}
+                  src={getProductImageUrl(product.image) || "https://images.pexels.com/photos/1458694/pexels-photo-1458694.jpeg"}
                   alt={product.name}
                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                  onError={(e) => {
+                    e.currentTarget.src = "https://images.pexels.com/photos/1458694/pexels-photo-1458694.jpeg";
+                  }}
                 />
                 <div className="absolute top-3 left-3">
                   <Badge className="bg-green-500 text-white">
@@ -1481,16 +1518,23 @@ export default function FarmerDashboard() {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {myProducts.map((product) => (
+        {myProducts.map((product) => {
+          const imageUrl = getProductImageUrl(product.image);
+          console.log(`🖼️ Producto: ${product.name}, Imagen original: ${product.image}, URL construida: ${imageUrl}`);
+          return (
           <Card
             key={product.id}
             className="flex flex-col overflow-hidden hover:shadow-lg transition-shadow"
           >
             <div className="relative h-56 w-full">
               <img
-                src={product.image}
+                src={imageUrl || "https://images.pexels.com/photos/1458694/pexels-photo-1458694.jpeg"}
                 alt={product.name}
                 className="h-full w-full object-cover"
+                onError={(e) => {
+                  console.error(`❌ Error cargando imagen: ${e.currentTarget.src}`);
+                  e.currentTarget.src = "https://images.pexels.com/photos/1458694/pexels-photo-1458694.jpeg";
+                }}
               />
               <div className="absolute top-3 right-3">
                 <Badge
@@ -1537,7 +1581,8 @@ export default function FarmerDashboard() {
               </Button>
             </CardFooter>
           </Card>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -1556,7 +1601,10 @@ export default function FarmerDashboard() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {vetShops.map((shop) => (
+          {vetShops.map((shop) => {
+            const imageUrl = getVetShopImageUrl(shop.image);
+            console.log(`🏪 [Farmer VetShop] Local: ${shop.name}, Imagen original: ${shop.image}, URL construida: ${imageUrl}`);
+            return (
             <Card
               key={shop.id}
               className="
@@ -1569,11 +1617,15 @@ export default function FarmerDashboard() {
               <div className="relative h-48 overflow-hidden rounded-t-lg">
                 <img
                   src={
-                    shop.image ||
+                    imageUrl ||
                     "https://images.pexels.com/photos/5327585/pexels-photo-5327585.jpeg"
                   }
                   alt={shop.name}
                   className="w-full h-full object-cover"
+                  onError={(e) => {
+                    console.error(`❌ [Farmer VetShop] Error cargando imagen: ${e.currentTarget.src}`);
+                    e.currentTarget.src = "https://images.pexels.com/photos/5327585/pexels-photo-5327585.jpeg";
+                  }}
                 />
               </div>
 
@@ -1593,7 +1645,8 @@ export default function FarmerDashboard() {
                 </Button>
               </CardContent>
             </Card>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
@@ -1622,9 +1675,12 @@ export default function FarmerDashboard() {
             {/* Izquierda: imagen + info */}
             <div className="flex items-center gap-4">
               <img
-                src={o.productImage || "/img/placeholder.png"}
+                src={getProductImageUrl(o.productImage) || "https://images.pexels.com/photos/1458694/pexels-photo-1458694.jpeg"}
                 alt={o.productName}
                 className="w-16 h-16 rounded-lg object-cover"
+                onError={(e) => {
+                  e.currentTarget.src = "https://images.pexels.com/photos/1458694/pexels-photo-1458694.jpeg";
+                }}
               />
               <div>
                 <h3 className="text-xl font-semibold text-gray-900">
@@ -2413,17 +2469,23 @@ export default function FarmerDashboard() {
                     </div>
                   </div>
                   <div>
-                    <Label htmlFor="image">URL de Imagen</Label>
+                    <Label htmlFor="image">Imagen del Producto</Label>
                     <Input
                       id="image"
-                      value={productForm.image}
-                      onChange={(e) =>
-                        setProductForm({
-                          ...productForm,
-                          image: e.target.value,
-                        })
-                      }
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setProductImageFile(file);
+                        }
+                      }}
                     />
+                    {productImageFile && (
+                      <p className="text-sm text-green-600 mt-2">
+                        Archivo seleccionado: {productImageFile.name}
+                      </p>
+                    )}
                   </div>
                   <div className="flex gap-4">
                     <Button
@@ -2787,11 +2849,15 @@ export default function FarmerDashboard() {
                 <div className="flex items-center gap-4 mb-6">
                   <img
                     src={
-                      showVetModal.image ||
+                      getVetShopImageUrl(showVetModal.image) ||
                       "https://images.pexels.com/photos/5327585/pexels-photo-5327585.jpeg"
                     }
                     className="w-20 h-20 rounded-lg object-cover"
                     alt={showVetModal.name}
+                    onError={(e) => {
+                      console.error(`❌ [Farmer VetShop Modal] Error cargando imagen: ${e.currentTarget.src}`);
+                      e.currentTarget.src = "https://images.pexels.com/photos/5327585/pexels-photo-5327585.jpeg";
+                    }}
                   />
                   <div>
                     <h3 className="text-xl font-bold text-gray-900">
@@ -2869,9 +2935,12 @@ export default function FarmerDashboard() {
             >
               <div className="relative">
                 <img
-                  src={selectedProduct.image}
+                  src={getProductImageUrl(selectedProduct.image) || "https://images.pexels.com/photos/1458694/pexels-photo-1458694.jpeg"}
                   alt={selectedProduct.name}
                   className="w-full h-80 object-cover"
+                  onError={(e) => {
+                    e.currentTarget.src = "https://images.pexels.com/photos/1458694/pexels-photo-1458694.jpeg";
+                  }}
                 />
                 <button
                   onClick={() => setSelectedProduct(null)}

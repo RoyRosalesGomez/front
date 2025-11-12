@@ -81,6 +81,7 @@ import { createLucideIcon } from "lucide-react";
 import AmbientBackground from "@/components/ui/AmbientBackground";
 import { ActivityService, Activity } from "@/services/activity.service"; // si usas la opción A
 import Swal from "sweetalert2";
+import { getProductImageUrl, getVetShopImageUrl } from "@/lib/image-utils";
 
 import React from "react";
 
@@ -277,6 +278,7 @@ export default function AdminDashboard() {
     address: "",
     image: "",
   });
+  const [vetShopImageFile, setVetShopImageFile] = useState<File | null>(null);
 
   const [editForm, setEditForm] = useState({
     name: "",
@@ -511,6 +513,11 @@ export default function AdminDashboard() {
         status: statusFilter === "all" ? undefined : (statusFilter as any),
         search: searchTerm || undefined,
       });
+      console.log('📦 [Admin] Productos cargados desde backend:', data);
+      if (data && data.length > 0) {
+        console.log('🖼️ [Admin] Primera imagen recibida:', data[0].image);
+        console.log('🔗 [Admin] URL construida:', getProductImageUrl(data[0].image));
+      }
       setProducts(data);
     } catch (error) {
       console.error("Error loading products:", error);
@@ -543,6 +550,11 @@ export default function AdminDashboard() {
   const loadVetShops = async () => {
     try {
       const data = await VetShopService.getAllVetShops(); // todas
+      console.log('🏪 [Admin] VetShops cargadas desde backend:', data);
+      if (data && data.length > 0) {
+        console.log('🖼️ [Admin] Primera imagen recibida:', data[0].image);
+        console.log('🔗 [Admin] URL construida:', getVetShopImageUrl(data[0].image));
+      }
       const normalized = (data || []).map((v: any) => ({
         ...v,
         active: typeof v.active === "boolean" ? v.active : !!Number(v.active),
@@ -754,7 +766,10 @@ export default function AdminDashboard() {
   const handleAddVetShop = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const created = await VetShopService.createVetShop(vetShopForm);
+      const created = await VetShopService.createVetShop({
+        ...vetShopForm,
+        image: vetShopImageFile,
+      });
 
       // normaliza el campo active (por si viene como 0/1)
       const normalized = {
@@ -804,6 +819,7 @@ export default function AdminDashboard() {
         address: "",
         image: "",
       });
+      setVetShopImageFile(null);
 
       // 3) Re-sincroniza desde backend para dejar todo consistente
       await Promise.all([loadVetShops(), loadStatistics()]);
@@ -1275,7 +1291,10 @@ export default function AdminDashboard() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {products.map((product) => (
+                {products.map((product) => {
+                  const imageUrl = getProductImageUrl(product.image);
+                  console.log(`🖼️ [Admin Tabla] Producto: ${product.name}, Imagen original: ${product.image}, URL construida: ${imageUrl}`);
+                  return (
                   <tr key={product.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       {product.farmer?.name || product.farmerId}
@@ -1284,9 +1303,13 @@ export default function AdminDashboard() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <img
-                          src={product.image}
+                          src={imageUrl || "https://images.pexels.com/photos/1458694/pexels-photo-1458694.jpeg"}
                           alt={product.name}
                           className="h-10 w-10 rounded-lg object-cover mr-3"
+                          onError={(e) => {
+                            console.error(`❌ [Admin Tabla] Error cargando imagen: ${e.currentTarget.src}`);
+                            e.currentTarget.src = "https://images.pexels.com/photos/1458694/pexels-photo-1458694.jpeg";
+                          }}
                         />
                         <span className="text-sm font-medium text-gray-900">
                           {product.name}
@@ -1327,7 +1350,8 @@ export default function AdminDashboard() {
                       </button>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -1425,17 +1449,24 @@ export default function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredVetShopsTable.map((shop) => (
+                  {filteredVetShopsTable.map((shop) => {
+                    const imageUrl = getVetShopImageUrl(shop.image);
+                    console.log(`🏪 [Admin Tabla VetShop] Local: ${shop.name}, Imagen original: ${shop.image}, URL construida: ${imageUrl}`);
+                    return (
                     <tr key={shop.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <img
                             src={
-                              shop.image ||
+                              imageUrl ||
                               "https://images.pexels.com/photos/5327585/pexels-photo-5327585.jpeg"
                             }
                             alt={shop.name}
                             className="h-10 w-10 rounded-lg object-cover mr-3"
+                            onError={(e) => {
+                              console.error(`❌ [Admin VetShop Tabla] Error cargando imagen: ${e.currentTarget.src}`);
+                              e.currentTarget.src = "https://images.pexels.com/photos/5327585/pexels-photo-5327585.jpeg";
+                            }}
                           />
                           <div>
                             <div className="text-sm font-medium text-gray-900">
@@ -1488,7 +1519,8 @@ export default function AdminDashboard() {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -1868,9 +1900,13 @@ export default function AdminDashboard() {
             >
               <div className="relative">
                 <img
-                  src={showProductDetails.image}
+                  src={getProductImageUrl(showProductDetails.image) || "https://images.pexels.com/photos/1458694/pexels-photo-1458694.jpeg"}
                   alt={showProductDetails.name}
                   className="w-full h-80 object-cover"
+                  onError={(e) => {
+                    console.error(`❌ [Admin Modal] Error cargando imagen: ${e.currentTarget.src}`);
+                    e.currentTarget.src = "https://images.pexels.com/photos/1458694/pexels-photo-1458694.jpeg";
+                  }}
                 />
                 <button
                   onClick={() => setShowProductDetails(null)}
@@ -2127,20 +2163,24 @@ export default function AdminDashboard() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="image">URL de Imagen</Label>
+                    <Label htmlFor="image">Imagen del Local</Label>
                     <Input
                       id="image"
-                      type="url"
-                      placeholder="https://ejemplo.com/logo.jpg"
-                      value={vetShopForm.image}
-                      onChange={(e) =>
-                        setVetShopForm({
-                          ...vetShopForm,
-                          image: e.target.value,
-                        })
-                      }
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setVetShopImageFile(file);
+                        }
+                      }}
                       className="border-gray-200"
                     />
+                    {vetShopImageFile && (
+                      <p className="text-sm text-gray-600">
+                        Archivo seleccionado: {vetShopImageFile.name}
+                      </p>
+                    )}
                   </div>
 
                   <div className="flex gap-4">
@@ -2201,10 +2241,14 @@ export default function AdminDashboard() {
                 <div className="flex items-center gap-4 mb-6">
                   <img
                     src={
-                      viewVetShop.image ||
+                      getVetShopImageUrl(viewVetShop.image) ||
                       "https://images.pexels.com/photos/5327585/pexels-photo-5327585.jpeg"
                     }
                     className="w-20 h-20 rounded-lg object-cover"
+                    onError={(e) => {
+                      console.error(`❌ [Admin VetShop Ver] Error cargando imagen: ${e.currentTarget.src}`);
+                      e.currentTarget.src = "https://images.pexels.com/photos/5327585/pexels-photo-5327585.jpeg";
+                    }}
                   />
                   <div>
                     <h3 className="text-xl font-bold text-gray-900">

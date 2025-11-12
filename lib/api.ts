@@ -194,12 +194,12 @@ if (!response.ok) {
       if (params?.search) queryParams.append('search', params.search);
       return this.request(`/products/approved?${queryParams}`);
     },
-    
-    getAll: (params?: { 
-      status?: string; 
-      category?: string; 
-      farmerId?: number; 
-      search?: string 
+
+    getAll: (params?: {
+      status?: string;
+      category?: string;
+      farmerId?: number;
+      search?: string
     }) => {
       const queryParams = new URLSearchParams();
       if (params?.status) queryParams.append('status', params.status);
@@ -208,39 +208,113 @@ if (!response.ok) {
       if (params?.search) queryParams.append('search', params.search);
       return this.request(`/products?${queryParams}`);
     },
-    
-    create: (productData: {
+
+    create: async (productData: {
       name: string;
       description: string;
       price: number;
       unit: string;
       stock: number;
-      image: string;
+      image?: File | null;
       category: 'frutas' | 'verduras' | 'granos' | 'otros';
       farmerId: number;
-    }) => this.request('/products', {
-      method: 'POST',
-      body: JSON.stringify(productData),
-    }),
-    
-    update: (id: number, productData: any) =>
-      this.request(`/products/${id}`, {
+    }) => {
+      const formData = new FormData();
+      formData.append('name', productData.name);
+      formData.append('description', productData.description);
+      formData.append('price', productData.price.toString());
+      formData.append('unit', productData.unit);
+      formData.append('stock', productData.stock.toString());
+      formData.append('category', productData.category);
+      formData.append('farmerId', productData.farmerId.toString());
+      if (productData.image) formData.append('image', productData.image);
+
+      const token = this.getToken();
+      const url = `${API_BASE_URL}/products`;
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : '',
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        let message = `HTTP ${response.status}`;
+        try {
+          const txt = await response.text();
+          if (txt) {
+            try { message = JSON.parse(txt).message || message; }
+            catch { message = txt || message; }
+          }
+        } catch {}
+        throw new Error(message);
+      }
+
+      const result = await response.json();
+      console.log('🔍 Respuesta de crear producto:', result);
+      console.log('🖼️ Imagen devuelta por backend:', result?.image);
+      return result;
+    },
+
+    update: async (id: number, productData: any) => {
+      // Si hay un archivo, usar FormData
+      if (productData.image instanceof File) {
+        const formData = new FormData();
+        if (productData.name) formData.append('name', productData.name);
+        if (productData.description) formData.append('description', productData.description);
+        if (productData.price !== undefined) formData.append('price', productData.price.toString());
+        if (productData.unit) formData.append('unit', productData.unit);
+        if (productData.stock !== undefined) formData.append('stock', productData.stock.toString());
+        if (productData.category) formData.append('category', productData.category);
+        formData.append('image', productData.image);
+
+        const token = this.getToken();
+        const url = `${API_BASE_URL}/products/${id}`;
+
+        const response = await fetch(url, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': token ? `Bearer ${token}` : '',
+          },
+          body: formData,
+        });
+
+        if (!response.ok) {
+          let message = `HTTP ${response.status}`;
+          try {
+            const txt = await response.text();
+            if (txt) {
+              try { message = JSON.parse(txt).message || message; }
+              catch { message = txt || message; }
+            }
+          } catch {}
+          throw new Error(message);
+        }
+
+        return response.json();
+      }
+
+      // Si no hay archivo, usar JSON normal
+      return this.request(`/products/${id}`, {
         method: 'PATCH',
         body: JSON.stringify(productData),
-      }),
-    
-    approve: (id: number) => 
+      });
+    },
+
+    approve: (id: number) =>
       this.request(`/products/${id}/approve`, { method: 'PATCH' }),
-    
-    reject: (id: number) => 
+
+    reject: (id: number) =>
       this.request(`/products/${id}/reject`, { method: 'PATCH' }),
-    
-    toggleActive: (id: number) => 
+
+    toggleActive: (id: number) =>
       this.request(`/products/${id}/toggle-active`, { method: 'PATCH' }),
-    
+
     getStatistics: () => this.request('/products/statistics'),
-    
-    delete: (id: number) => 
+
+    delete: (id: number) =>
       this.request(`/products/${id}`, { method: 'DELETE' }),
   };
 
@@ -282,24 +356,59 @@ if (!response.ok) {
   // 🏪 SERVICIOS DE AGRO VETERINARIAS
   vetShops = {
     getActive: () => this.request('/vet-shops/active'),
-    
+
     getAll: (params?: { active?: boolean }) => {
       const queryParams = new URLSearchParams();
       if (params?.active !== undefined) queryParams.append('active', params.active.toString());
       return this.request(`/vet-shops?${queryParams}`);
     },
-    
-    create: (shopData: {
+
+    create: async (shopData: {
       name: string;
       email: string;
       phone: string;
       location: string;
       address: string;
-      image?: string;
-    }) => this.request('/vet-shops', {
-      method: 'POST',
-      body: JSON.stringify(shopData),
-    }),
+      image?: File | null;
+    }) => {
+      const formData = new FormData();
+      formData.append('name', shopData.name);
+      formData.append('email', shopData.email);
+      formData.append('phone', shopData.phone);
+      formData.append('location', shopData.location);
+      formData.append('address', shopData.address);
+      if (shopData.image) {
+        formData.append('image', shopData.image);
+      }
+
+      const token = this.getToken();
+      const url = `${API_BASE_URL}/vet-shops`;
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : '',
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        let message = `Error ${response.status}`;
+        try {
+          const txt = await response.text();
+          if (txt) {
+            try { message = JSON.parse(txt).message || message; }
+            catch { message = txt || message; }
+          }
+        } catch {}
+        throw new Error(message);
+      }
+
+      const result = await response.json();
+      console.log('🔍 Respuesta de crear vet-shop:', result);
+      console.log('🖼️ Imagen devuelta por backend:', result?.image);
+      return result;
+    },
     
     update: (id: number, shopData: any) =>
       this.request(`/vet-shops/${id}`, {
@@ -353,34 +462,99 @@ if (!response.ok) {
 
   // 🌱 SERVICIOS DE CULTIVOS
   cultivos = {
-    create: (cultivoData: {
+    create: async (cultivoData: {
       name: string;
       variedad: string;
       comentario?: string;
-      image?: string;
-     // farmerId: number;
-    }) => this.request('/cultivos', {
-      method: 'POST',
-      body: JSON.stringify(cultivoData),
-    }),
-    
+      image?: File | null;
+      farmerId: number;
+    }) => {
+      const formData = new FormData();
+      formData.append('name', cultivoData.name);
+      formData.append('variedad', cultivoData.variedad);
+      if (cultivoData.comentario) formData.append('comentario', cultivoData.comentario);
+      if (cultivoData.image) formData.append('image', cultivoData.image);
+      formData.append('farmerId', cultivoData.farmerId.toString());
+
+      const token = this.getToken();
+      const url = `${API_BASE_URL}/cultivos`;
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : '',
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        let message = `HTTP ${response.status}`;
+        try {
+          const txt = await response.text();
+          if (txt) {
+            try { message = JSON.parse(txt).message || message; }
+            catch { message = txt || message; }
+          }
+        } catch {}
+        throw new Error(message);
+      }
+
+      return response.json();
+    },
+
     getAll: (params?: { farmerId?: number; active?: boolean }) => {
       const queryParams = new URLSearchParams();
       if (params?.farmerId) queryParams.append('farmerId', params.farmerId.toString());
       if (params?.active !== undefined) queryParams.append('active', params.active.toString());
       return this.request(`/cultivos?${queryParams}`);
     },
-    
-    update: (id: number, cultivoData: any) =>
-      this.request(`/cultivos/${id}`, {
+
+    update: async (id: number, cultivoData: any) => {
+      // Si hay un archivo, usar FormData
+      if (cultivoData.image instanceof File) {
+        const formData = new FormData();
+        formData.append('name', cultivoData.name);
+        formData.append('variedad', cultivoData.variedad);
+        if (cultivoData.comentario) formData.append('comentario', cultivoData.comentario);
+        formData.append('image', cultivoData.image);
+
+        const token = this.getToken();
+        const url = `${API_BASE_URL}/cultivos/${id}`;
+
+        const response = await fetch(url, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': token ? `Bearer ${token}` : '',
+          },
+          body: formData,
+        });
+
+        if (!response.ok) {
+          let message = `HTTP ${response.status}`;
+          try {
+            const txt = await response.text();
+            if (txt) {
+              try { message = JSON.parse(txt).message || message; }
+              catch { message = txt || message; }
+            }
+          } catch {}
+          throw new Error(message);
+        }
+
+        return response.json();
+      }
+
+      // Si no hay archivo, usar JSON normal
+      return this.request(`/cultivos/${id}`, {
         method: 'PATCH',
         body: JSON.stringify(cultivoData),
-      }),
-    
-    toggleActive: (id: number) => 
+      });
+    },
+
+    toggleActive: (id: number) =>
       this.request(`/cultivos/${id}/toggle-active`, { method: 'PATCH' }),
-    
-    delete: (id: number) => 
+
+    delete: (id: number) =>
       this.request(`/cultivos/${id}`, { method: 'DELETE' }),
   };
 
