@@ -28,7 +28,7 @@ export class CultivoService {
   }
 
   // Actualizar cultivo
-  static async updateCultivo(id: number, cultivoData: Partial<Cultivo>) {
+  static async updateCultivo(id: number, cultivoData: Partial<Cultivo> & { image?: File | string }) {
     try {
       return await api.cultivos.update(id, cultivoData);
     } catch (error) {

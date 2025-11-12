@@ -28,7 +28,7 @@ export class VetShopService {
     phone: string;
     location: string;
     address: string;
-    image?: string;
+    image?: File | null;
   }) {
     try {
       return await api.vetShops.create(shopData);

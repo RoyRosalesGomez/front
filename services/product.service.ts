@@ -32,7 +32,7 @@ export class ProductService {
     price: number;
     unit: string;
     stock: number;
-    image: string;
+    image?: File | null;
     category: ProductCategory;
     status?: ProductStatus;
     farmerId: number;
@@ -41,7 +41,7 @@ export class ProductService {
   }
 
   // Actualizar producto
-  static async updateProduct(id: number, productData: Partial<Product>) {
+  static async updateProduct(id: number, productData: Partial<Product> & { image?: File | string }) {
     return api.products.update(id, productData);
   }
 
