@@ -1266,7 +1266,8 @@ export default function FarmerDashboard() {
   const filteredProducts = products.filter((p) => {
     const byCat = categoryFilter === "all" || p.category === categoryFilter;
     const byText = p.name.toLowerCase().includes(searchTerm.toLowerCase());
-    return byCat && byText;
+    const hasStock = p.stock > 0; // Ocultar productos sin stock para agricultores
+    return byCat && byText && hasStock;
   });
 
   const addToCart = (product: ProductUI, quantity: number): void => {
@@ -3245,6 +3246,9 @@ export default function FarmerDashboard() {
 
                               setCart([]);
                               setShowCart(false);
+
+                              // 🔄 Recargar productos para actualizar el stock
+                              await loadApprovedProducts();
                             } catch (err) {
                               console.error(err);
 

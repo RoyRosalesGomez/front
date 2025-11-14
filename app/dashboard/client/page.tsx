@@ -156,7 +156,8 @@ export default function ClientDashboard() {
     const matchesSearch = product.name
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
-    return matchesCategory && matchesSearch;
+    const hasStock = product.stock > 0; // Ocultar productos sin stock para clientes
+    return matchesCategory && matchesSearch && hasStock;
   });
 
   const addToCart = (product: Product, quantity: number): void => {
@@ -809,6 +810,9 @@ export default function ClientDashboard() {
 
                               setCart([]);
                               setShowCart(false);
+
+                              // 🔄 Recargar productos para actualizar el stock
+                              await loadProducts();
                             } catch (err) {
                               console.error("Error processing orders:", err);
 
