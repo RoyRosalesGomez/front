@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: agroglobal-frontend
+    env: node
+    region: oregon # Puedes cambiar a: oregon, frankfurt, singapore, ohio
+    plan: free # Opciones: free, starter, standard, pro
+    branch: Ariel # Cambia esto a la rama que quieras desplegar
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_API_URL
+        sync: false # Configurarás esto manualmente en el dashboard de Render
+    # Configuración de autodespliegue
+    autoDeploy: true
+    # Configuración de health check
+    healthCheckPath: /
