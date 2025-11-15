@@ -141,11 +141,21 @@ export default function ClientAuth() {
           });
         } catch (error: any) {
           console.error("Error en registro:", error);
+
+          // Traducir mensajes de error del backend
+          let errorMessage = error.message || "No se pudo crear la cuenta. Intenta nuevamente.";
+
+          if (errorMessage.includes("password must be longer than or equal to 6")) {
+            errorMessage = "La contraseña debe tener al menos 6 caracteres";
+          } else if (errorMessage.includes("email already exists") || errorMessage.includes("Email already registered")) {
+            errorMessage = "Este correo electrónico ya está registrado";
+          } else if (errorMessage.includes("Invalid email")) {
+            errorMessage = "Correo electrónico inválido";
+          }
+
           await Swal.fire({
             title: "Error al registrarse",
-            text:
-              error.message ||
-              "No se pudo crear la cuenta. Intenta nuevamente.",
+            text: errorMessage,
             icon: "error",
             confirmButtonColor: "#ef4444",
           });

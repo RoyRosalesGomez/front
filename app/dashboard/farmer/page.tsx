@@ -1582,7 +1582,7 @@ export default function FarmerDashboard() {
                   Precio: ₡{product.price.toLocaleString()}/{product.unit}
                 </p>
                 <p className="text-sm text-gray-600">
-                  Reserva: {product.stock} {product.unit}s
+                  Cantidad disponible: {product.stock} {product.unit}s
                 </p>
               </div>
             </CardContent>
@@ -2489,20 +2489,37 @@ export default function FarmerDashboard() {
                     </div>
                     <div>
                       <Label htmlFor="unit">Unidad *</Label>
-                      <Input
-                        id="unit"
+                      <Select
                         value={productForm.unit}
-                        onChange={(e) =>
+                        onValueChange={(value) =>
                           setProductForm({
                             ...productForm,
-                            unit: e.target.value,
+                            unit: value,
                           })
                         }
                         required
-                      />
+                      >
+                        <SelectTrigger id="unit">
+                          <SelectValue placeholder="Seleccione una unidad" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="kg">Kilogramo (kg)</SelectItem>
+                          <SelectItem value="g">Gramo (g)</SelectItem>
+                          <SelectItem value="unidad">Unidad</SelectItem>
+                          <SelectItem value="litros">Litros (L)</SelectItem>
+                          <SelectItem value="ml">Mililitros (ml)</SelectItem>
+                          <SelectItem value="fanega">Fanega</SelectItem>
+                          <SelectItem value="cajuela">Cajuela</SelectItem>
+                          <SelectItem value="lb">Libra (lb)</SelectItem>
+                          <SelectItem value="oz">Onza (oz)</SelectItem>
+                          <SelectItem value="docena">Docena</SelectItem>
+                          <SelectItem value="caja">Caja</SelectItem>
+                          <SelectItem value="saco">Saco</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div>
-                      <Label htmlFor="stock">Reserva *</Label>
+                      <Label htmlFor="stock">Cantidad disponible *</Label>
                       <Input
                         id="stock"
                         type="number"
