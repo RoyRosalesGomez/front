@@ -8,68 +8,32 @@ import {
   Package,
   ShoppingCart,
   Store,
-  Camera,
-  Building2,
-  TrendingUp,
   UserCheck,
   UserX,
   Eye,
-  CreditCard as Edit,
-  Trash2,
   Plus,
   Search,
-  Filter,
-  MoveHorizontal as MoreHorizontal,
-  CircleCheck as CheckCircle,
-  Circle as XCircle,
-  CircleAlert as AlertCircle,
   ChartBar as BarChart3,
-  ChartPie as PieChart,
-  DollarSign,
   Leaf,
   LogOut,
-  Settings,
-  Bell,
-  RefreshCw,
-  Download,
-  Upload,
-  Mail,
-  Phone,
-  MapPin,
-  Calendar,
-  Clock,
-  Star,
-  Award,
-  Target,
-  Zap,
   X,
-  Save,
-  Check,
-  Key,
   Edit3,
-  Square,
-  Edit2,
-  LucideEdit3,
-  Edit3Icon,
-  Activity as ActivityIcon,
+  Building2,
+  AlertCircle,
+  Bell,
   Sun,
   Moon,
-  SquarePen as SquareEdit,
+  Save,
+  Key,
+  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { UserService } from "@/services/user.service";
 import { ProductService } from "@/services/product.service";
 import { OrderService } from "@/services/order.service";
@@ -77,13 +41,11 @@ import { VetShopService } from "@/services/vetshop.service";
 import { AuthService } from "@/services/auth.service";
 import { User, Product, Order, VetShop } from "@/lib/api";
 import { toast } from "sonner";
-import { createLucideIcon } from "lucide-react";
 import AmbientBackground from "@/components/ui/AmbientBackground";
-import { ActivityService, Activity } from "@/services/activity.service"; // si usas la opción A
+import { ActivityService, Activity } from "@/services/activity.service";
 import Swal from "sweetalert2";
 import { getProductImageUrl, getVetShopImageUrl } from "@/lib/image-utils";
-
-import React from "react";
+import { createLucideIcon } from "lucide-react";
 
 interface Statistics {
   users: {
@@ -254,9 +216,6 @@ export default function AdminDashboard() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [showProfile, setShowProfile] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [selectedVetShop, setSelectedVetShop] = useState<VetShop | null>(null);
   const [showAddVetShop, setShowAddVetShop] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState<User | null>(
     null

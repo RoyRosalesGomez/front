@@ -1,10 +1,9 @@
 'use client';
 
-import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  ShoppingCart, 
-  ArrowLeft, 
+import {
+  ShoppingCart,
+  ArrowLeft,
   ArrowRight,
   Leaf
 } from 'lucide-react';

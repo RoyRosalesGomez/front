@@ -10,32 +10,26 @@ import {
   Sprout,
   Home,
   LogOut,
-  Bell,
   Plus,
   Search,
-  Star,
   MapPin,
   Phone,
-  Mail,
   Trash2,
-  Save,
   X,
   Leaf,
   Edit,
   ToggleLeft,
   ToggleRight,
-  LeafyGreen,
   CheckCircle,
   Clock,
   Eye,
   Minus,
   ArrowLeft,
-  Briefcase,
-  ChevronDown,
-  ChevronUp,
   ChevronRight,
   Bot,
+  Briefcase,
   ClipboardList,
+  Save,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -122,7 +116,6 @@ interface OfferProduct {
   rating: number;
   createdAt: string;
 }
-
 interface Order {
   id: number;
   quantity: number;
@@ -178,15 +171,6 @@ interface Propiedad {
   createdAt: string;
 }
 
-// Helper para formatear colones como "₡1000" (sin decimales)
-// Cambia useGrouping a true si quieres "₡1.000"
-const formatCRC = (v: number | string) =>
-  `₡${Number(v).toLocaleString("es-CR", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-    useGrouping: false,
-  })}`;
-
 export default function FarmerDashboard() {
   const [activeSection, setActiveSection] = useState("marketplace");
   const [showProfile, setShowProfile] = useState(false);
@@ -196,8 +180,6 @@ export default function FarmerDashboard() {
     "all" | "frutas" | "verduras" | "granos"
   >("all");
   const currentUser = AuthService.getCurrentUser(); // { id, email, role, ... }
-
-  const [darkSidebar, setDarkSidebar] = useState(false);
 
   // Estado para controlar si el menú "Gestión Comercial" está desplegado o no
   const [isCommercialOpen, setIsCommercialOpen] = useState(true);
@@ -915,7 +897,7 @@ export default function FarmerDashboard() {
     }
   };
 
-  // Eliminar
+  // Eliminar (solo para productos PENDING)
   const handleDeleteProduct = async (id: number, name?: string) => {
     const result = await Swal.fire({
       title: "¿Estás seguro?",
@@ -944,6 +926,45 @@ export default function FarmerDashboard() {
       toast.error("No se pudo eliminar el producto");
       // Revertimos si el backend falló
       setMyProducts(prev);
+    }
+  };
+
+  // Toggle active (solo para productos APPROVED)
+  const handleToggleProduct = async (id: number, currentActive?: boolean) => {
+    const product = myProducts.find((p) => p.id === id);
+    const action = currentActive ? "desactivar" : "activar";
+
+    const result = await Swal.fire({
+      title: `¿${action.charAt(0).toUpperCase() + action.slice(1)} producto?`,
+      text: `El producto "${product?.name ?? ""}" será ${action === "activar" ? "activado" : "desactivado"}`,
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonColor: currentActive ? "#ef4444" : "#10b981",
+      cancelButtonColor: "#6b7280",
+      confirmButtonText: `Sí, ${action}`,
+      cancelButtonText: "Cancelar",
+    });
+
+    if (!result.isConfirmed) return;
+
+    // Optimista: refleja el cambio al instante
+    setMyProducts((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, active: !p.active } : p))
+    );
+    try {
+      await ProductService.toggleActiveProduct(id);
+      toast.success(
+        `Producto ${action === "activar" ? "activado" : "desactivado"}`
+      );
+    } catch (err) {
+      // Revierte si falla
+      setMyProducts((prev) =>
+        prev.map((p) =>
+          p.id === id ? { ...p, active: currentActive ?? p.active } : p
+        )
+      );
+      console.error(err);
+      toast.error("No se pudo cambiar el estado");
     }
   };
 
@@ -1567,6 +1588,7 @@ export default function FarmerDashboard() {
             </CardContent>
 
             <CardFooter className="border-t bg-white p-4 flex justify-end gap-2">
+              {/* Editar: siempre disponible */}
               <Button
                 variant="outline"
                 onClick={() => handleOpenEditProduct(product)}
@@ -1574,12 +1596,38 @@ export default function FarmerDashboard() {
               >
                 <Edit className="h-4 w-4 mr-2" />
               </Button>
-              <Button
-                variant="destructive"
-                onClick={() => handleDeleteProduct(product.id, product.name)}
-              >
-                <Trash2 className="h-4 w-4 mr-1" />
-              </Button>
+
+              {/* Eliminar: solo si está PENDING */}
+              {product.status === "pending" && (
+                <Button
+                  variant="destructive"
+                  onClick={() => handleDeleteProduct(product.id, product.name)}
+                >
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  Eliminar
+                </Button>
+              )}
+
+              {/* Toggle Active: solo si está APPROVED */}
+              {product.status === "approved" && (
+                <Button
+                  variant={product.active ? "default" : "outline"}
+                  onClick={() => handleToggleProduct(product.id, product.active)}
+                  className={product.active ? "bg-green-500 hover:bg-green-600 text-white" : "border-gray-300"}
+                >
+                  {product.active ? (
+                    <>
+                      <ToggleRight className="h-4 w-4 mr-1" />
+                      Activo
+                    </>
+                  ) : (
+                    <>
+                      <ToggleLeft className="h-4 w-4 mr-1" />
+                      Inactivo
+                    </>
+                  )}
+                </Button>
+              )}
             </CardFooter>
           </Card>
           );
@@ -2123,7 +2171,7 @@ export default function FarmerDashboard() {
 
   return (
     <div
-      className={`min-h-screen transition-colors duration-300 ${darkSidebar ? "bg-[#0f172a] text-white" : "bg-gradient-to-br from-green-50 via-emerald-50 to-green-100 text-gray-900"}`}
+      className="min-h-screen transition-colors duration-300 bg-gradient-to-br from-green-50 via-emerald-50 to-green-100 text-gray-900"
     >
       {/* Header */}
       <header className="bg-white/95 backdrop-blur-sm shadow-lg sticky top-0 z-40">
@@ -2170,7 +2218,7 @@ export default function FarmerDashboard() {
               >
                 <Avatar className="h-8 w-8">
                   <AvatarFallback>
-                    <LeafyGreen className="h-5 w-5 text-green-700" />
+                    <Leaf className="h-5 w-5 text-green-700" />
                   </AvatarFallback>
                 </Avatar>
               </Button>

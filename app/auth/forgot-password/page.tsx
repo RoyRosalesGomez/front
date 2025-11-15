@@ -14,7 +14,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { AuthService } from '@/services/auth.service';
-import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 
 export default function ForgotPassword() {
@@ -28,18 +27,15 @@ export default function ForgotPassword() {
     setIsLoading(true);
 
     try {
-      const response = await AuthService.forgotPassword(email);
+      await AuthService.forgotPassword(email);
 
-      toast.success(response.message || 'Correo verificado correctamente');
       setEmailVerified(true);
 
-      // Redirigir a la página de reset después de 2 segundos
       setTimeout(() => {
         router.push(`/auth/reset-password?email=${encodeURIComponent(email)}`);
       }, 2000);
     } catch (error: any) {
       console.error('Error en forgot password:', error);
-      toast.error(error.message || 'Error al verificar el correo electrónico');
     } finally {
       setIsLoading(false);
     }

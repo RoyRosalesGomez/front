@@ -5,15 +5,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   ShoppingCart,
   Search,
-  Filter,
   Plus,
   Minus,
   X,
   User,
   LogOut,
-  Bell,
-  Heart,
-  Star,
   Leaf,
   Package,
   Trash2,
@@ -51,7 +47,6 @@ interface CartItem extends Product {
 }
 
 export default function ClientDashboard() {
-  const [selectedCategory, setSelectedCategory] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [productQuantity, setProductQuantity] = useState(1);
@@ -61,7 +56,7 @@ export default function ClientDashboard() {
   const [loading, setLoading] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [adding, setAdding] = useState(false);
-  const [finalizing, setFinalizing] = useState(false); // evita doble clic en “Finalizar compra”
+  const [finalizing, setFinalizing] = useState(false);
 
   const [products, setProducts] = useState<Product[]>([]);
 

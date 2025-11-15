@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { motion } from 'framer-motion';
 import {
   ArrowLeft,
@@ -17,10 +17,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { AuthService } from '@/services/auth.service';
-import { toast } from 'sonner';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function ResetPassword() {
+function ResetPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
@@ -32,7 +31,6 @@ export default function ResetPassword() {
   const [passwordReset, setPasswordReset] = useState(false);
 
   useEffect(() => {
-    // Obtener email de los query params
     const emailParam = searchParams.get('email');
     if (emailParam) {
       setEmail(decodeURIComponent(emailParam));
@@ -42,31 +40,17 @@ export default function ResetPassword() {
   const handleSubmit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
 
-    // Validaciones
-    if (!email) {
-      toast.error('No se ha proporcionado un correo electrónico');
-      return;
-    }
-
-    if (password.length < 6) {
-      toast.error('La contraseña debe tener al menos 6 caracteres');
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      toast.error('Las contraseñas no coinciden');
+    if (!email || password.length < 6 || password !== confirmPassword) {
       return;
     }
 
     setIsLoading(true);
 
     try {
-      const response = await AuthService.resetPassword(email, password, confirmPassword);
+      await AuthService.resetPassword(email, password, confirmPassword);
 
-      toast.success(response.message || 'Contraseña actualizada exitosamente');
       setPasswordReset(true);
 
-      // Limpiar cualquier token o sesión anterior
       if (typeof window !== 'undefined') {
         localStorage.removeItem('agroglobal_token');
         localStorage.removeItem('agroglobal_user');
@@ -82,7 +66,6 @@ export default function ResetPassword() {
       let loginRoute = '/auth/client/login'; // Por defecto cliente
 
       try {
-        // Hacer una llamada temporal para obtener el rol
         const tempResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api'}/auth/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -93,7 +76,6 @@ export default function ResetPassword() {
           const tempData = await tempResponse.json();
           const userRole = tempData.user?.role;
 
-          // Determinar la ruta según el rol
           if (userRole === 'farmer') {
             loginRoute = '/auth/farmer/login';
           } else if (userRole === 'admin') {
@@ -102,7 +84,6 @@ export default function ResetPassword() {
             loginRoute = '/auth/client/login';
           }
 
-          // Limpiar el token temporal
           if (typeof window !== 'undefined') {
             localStorage.removeItem('agroglobal_token');
             localStorage.removeItem('agroglobal_user');
@@ -112,16 +93,13 @@ export default function ResetPassword() {
         console.log('No se pudo determinar el rol, usando cliente por defecto');
       }
 
-      // Redirigir al login correcto después de 3 segundos con recarga completa FORZADA
       setTimeout(() => {
-        // Forzar recarga completa de la página (bypass cache)
         if (typeof window !== 'undefined') {
           window.location.replace(`${loginRoute}?passwordReset=true&t=` + Date.now());
         }
       }, 3000);
     } catch (error: any) {
       console.error('Error en reset password:', error);
-      toast.error(error.message || 'Error al restablecer la contraseña');
     } finally {
       setIsLoading(false);
     }
@@ -337,5 +315,13 @@ export default function ResetPassword() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ResetPassword() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Cargando...</div>}>
+      <ResetPasswordForm />
+    </Suspense>
   );
 }

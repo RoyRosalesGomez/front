@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -21,17 +21,16 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AuthService } from "@/services/auth.service";
-import { toast } from "sonner";
 import Swal from "sweetalert2";
 
-export default function FarmerAuth() {
+function FarmerAuthForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [formKey, setFormKey] = useState(Date.now()); // Key para forzar re-render del form
+  const [formKey, setFormKey] = useState(Date.now());
   const [formData, setFormData] = useState({
     name: "",
     lastName: "",
@@ -43,13 +42,10 @@ export default function FarmerAuth() {
     confirmPassword: "",
   });
 
-  // Detectar si viene de un reset de contraseña
   useEffect(() => {
     if (searchParams.get("passwordReset") === "true") {
-      // Forzar re-render completo del formulario
       setFormKey(Date.now());
 
-      // Limpiar completamente el formulario
       setFormData({
         name: "",
         lastName: "",
@@ -61,11 +57,6 @@ export default function FarmerAuth() {
         confirmPassword: "",
       });
 
-      toast.success(
-        "Contraseña actualizada exitosamente. Inicia sesión con tu nueva contraseña."
-      );
-
-      // Limpiar los parámetros de la URL sin causar re-render
       const url = new URL(window.location.href);
       url.searchParams.delete("passwordReset");
       url.searchParams.delete("t");
@@ -212,9 +203,6 @@ export default function FarmerAuth() {
       }
     } catch (error: any) {
       console.error("Error en autenticación:", error);
-      toast.error(
-        "Error de conexión. Verifica que el backend esté ejecutándose."
-      );
     } finally {
       setIsLoading(false);
     }
@@ -593,5 +581,13 @@ export default function FarmerAuth() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function FarmerAuth() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Cargando...</div>}>
+      <FarmerAuthForm />
+    </Suspense>
   );
 }

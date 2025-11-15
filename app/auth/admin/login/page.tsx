@@ -21,7 +21,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AuthService } from "@/services/auth.service";
-import { toast } from "sonner";
 import Swal from "sweetalert2";
 
 export default function AdminAuth() {
